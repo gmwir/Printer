@@ -38,7 +38,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 
 <div class="card">
   <h2>۱) اتصال</h2>
-  <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button><button id="bNew">دستگاه دیگر</button></div>
+  <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button><button id="bNew">نمایش همه‌ی دستگاه‌ها</button></div>
   <div class="row"><span class="pill" id="st">متصل نیست</span></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
   <div class="row"><button id="bTest">چاپ تست</button></div>
@@ -124,6 +124,7 @@ const LS = {
 function log(m){ const t = new Date().toLocaleTimeString('en-GB'); const L = $('log'); L.value += '['+t+'] '+m+'\n'; L.scrollTop = 1e9; }
 function setStatus(t, ok){ const s = $('st'); s.textContent = t; s.className = 'pill' + (ok===true?' ok':ok===false?' bad':''); }
 function setP(t){ $('ptxt').textContent = t; }
+function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
 document.querySelectorAll('[data-save]').forEach(el => {
@@ -268,12 +269,16 @@ async function openGatt(){
 $('chSel').addEventListener('change', e => {
   const x = chars[+e.target.value]; chr = x.c; selKey = x.s + '/' + x.c.uuid; log('کانال: ' + selKey);
 });
-async function connect(){
+async function connect(mode){
   if (!navigator.bluetooth) { $('nobt').hidden = false; throw new Error('Web Bluetooth در این مرورگر نیست'); }
   if (device) { try { await openGatt(); return; } catch(e){ log('اتصال مجدد نشد: ' + e.message); } }
   try {
-    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: OPT });
-  } catch(e){ setStatus('انتخاب دستگاه لغو شد', false); throw e; }
+    const opts = mode === 'all'
+      ? { acceptAllDevices: true, optionalServices: OPT }
+      : { filters: [{ services: [0x18f0] }, { namePrefix: 'PT-' }], optionalServices: OPT };
+    log('requestDevice: ' + (mode === 'all' ? 'همه دستگاه‌ها' : 'فیلتر PT / 18F0'));
+    device = await navigator.bluetooth.requestDevice(opts);
+  } catch(e){ log('requestDevice خطا: ' + errText(e)); setStatus('دستگاه انتخاب نشد: ' + errText(e), false); throw e; }
   device.addEventListener('gattserverdisconnected', () => { chr = null; setStatus('قطع شد', false); log('اتصال قطع شد'); });
   selKey = null;
   await openGatt();
@@ -425,11 +430,11 @@ function testCanvas(){
 }
 
 /* ---------- رویدادها ---------- */
-$('bConn').onclick = async () => { try { await connect(); } catch(e){ log('اتصال: ' + e.message); if (e.name !== 'NotFoundError') setStatus('خطا: ' + e.message, false); } };
+$('bConn').onclick = async () => { try { await connect('filter'); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); } };
 $('bNew').onclick = async () => {
   try { if (device && device.gatt.connected) device.gatt.disconnect(); } catch(e){}
   device = null; chr = null; selKey = null;
-  try { await connect(); } catch(e){ log('اتصال: ' + e.message); }
+  try { await connect('all'); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bTest').onclick = async () => {
   try {
