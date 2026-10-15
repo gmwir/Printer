@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>چاپ دسته‌ای PT-260</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#111;--mut:#667;--pri:#0a6cff;--ok:#12805c;--bad:#c62828;--bd:#dde}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1a1d24;--tx:#eee;--mut:#99a;--pri:#4d94ff;--ok:#3ecf9a;--bad:#ff6b6b;--bd:#2b2f3a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 -apple-system,system-ui,Tahoma,sans-serif;padding:12px 12px 40px}
+h1{font-size:19px;margin:4px auto 12px;max-width:560px}
+h2{font-size:15px;margin:0 0 10px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:0 auto 12px;max-width:560px}
+.warn{background:#fff3cd;color:#664d03;border-radius:10px;padding:8px 12px;margin:0 auto 12px;max-width:560px;font-size:14px}
+button{font:inherit;min-height:46px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:0 14px}
+button.p{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+button.d{color:var(--bad)}
+button:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.row>button{flex:1 1 auto}
+label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mut);flex:1 1 90px}
+input[type=number],select{font:inherit;min-height:44px;border:1px solid var(--bd);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);width:100%}
+input[type=range]{width:100%}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--bg);font-size:13px}
+.pill.ok{color:var(--ok)}.pill.bad{color:var(--bad)}
+progress{width:100%;height:14px}
+#pv{width:100%;max-width:384px;image-rendering:pixelated;border:1px solid var(--bd);background:#fff;display:block;margin:8px auto}
+textarea{width:100%;height:160px;font:12px/1.4 monospace;direction:ltr;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px}
+summary{cursor:pointer;color:var(--mut);padding:6px 0}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--tx);font-size:15px}
+</style>
+</head>
+<body>
+<h1>🖨️ چاپ دسته‌ای PT-260</h1>
+<div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
+
+<div class="card">
+  <h2>۱) اتصال</h2>
+  <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button><button id="bNew">دستگاه دیگر</button></div>
+  <div class="row"><span class="pill" id="st">متصل نیست</span></div>
+  <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
+  <div class="row"><button id="bTest">چاپ تست</button></div>
+</div>
+
+<div class="card">
+  <h2>۲) فایل</h2>
+  <input type="file" id="file" accept="application/pdf,image/*" multiple>
+  <div class="row"><span class="pill" id="info">فایلی انتخاب نشده</span></div>
+  <canvas id="pv" width="384" height="10"></canvas>
+  <div class="row">
+    <label>حالت
+      <select id="mode" data-save>
+        <option value="th">آستانه (متن / بارکد / QR)</option>
+        <option value="fs">دیترینگ (عکس)</option>
+      </select>
+    </label>
+    <label>آستانه‌ی سیاهی: <b id="thv">160</b>
+      <input type="range" id="thr" min="60" max="220" value="160" data-save>
+    </label>
+  </div>
+  <label class="chk"><input type="checkbox" id="rot" data-save> چرخاندن ۹۰° (صفحه‌ی افقی)</label>
+</div>
+
+<div class="card">
+  <h2>۳) چاپ</h2>
+  <div class="row">
+    <label>از برگ<input type="number" id="from" value="1" min="1" inputmode="numeric"></label>
+    <label>تا برگ<input type="number" id="to" value="1" min="1" inputmode="numeric"></label>
+    <label>تعداد کپی<input type="number" id="copies" value="1" min="1" max="99" inputmode="numeric" data-save></label>
+  </div>
+  <div class="row">
+    <label>بعد از هر برگ
+      <select id="after" data-save>
+        <option value="lines">فید چند خط</option>
+        <option value="ff">FF (رفتن به لیبل بعد)</option>
+        <option value="gsff">GS FF (لیبل بعد)</option>
+      </select>
+    </label>
+    <label>تعداد خط فید<input type="number" id="lines" value="3" min="0" max="255" inputmode="numeric" data-save></label>
+  </div>
+  <div class="row">
+    <button class="p" id="bStart">شروع چاپ</button>
+    <button id="bPause" disabled>توقف موقت</button>
+    <button class="d" id="bStop" disabled>لغو</button>
+  </div>
+  <progress id="prog" value="0" max="1"></progress>
+  <div><span class="pill" id="ptxt">آماده</span></div>
+  <p style="font-size:13px;color:var(--mut);margin:8px 0 0">هنگام چاپ، Bluefy را باز و صفحه را روشن نگه دار.</p>
+</div>
+
+<div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
+  <div class="row"><button data-prof="20,20">ایمن</button><button data-prof="100,10">متعادل</button><button data-prof="180,6">سریع</button></div>
+  <div class="row">
+    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="100" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="10" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>نوع نوشتن
+      <select id="wmode" data-save><option value="auto">خودکار</option><option value="resp">با تأیید</option></select>
+    </label>
+  </div>
+  <p style="font-size:13px;color:var(--mut)">اگر چاپ ناقص یا خراب شد «ایمن» را بزن. اگر خیلی کند بود «سریع».</p>
+</details></div>
+
+<div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
+  <textarea id="log" readonly></textarea>
+  <div class="row"><button id="bCopy">کپی گزارش</button></div>
+</details></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+'use strict';
+const W = 384, BYTES = W / 8;               // ۵۸ میلی‌متر، ۲۰۳dpi => ۳۸۴ نقطه
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const STOP = new Error('stop');
+const OPT = [0xff00,0xff01,0xff02,0xffe0,0xffe1,0xffe5,0xfff0,0xffb0,0xffc0,0xff12,0xfee7,0xae00,0xae30,0x18f0,
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455','e7810a71-73ae-499d-8c15-faa9aef0c3f2','bef8d6c9-9c21-4c9e-b632-bd58c1009f9f'];
+
+const LS = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+function log(m){ const t = new Date().toLocaleTimeString('en-GB'); const L = $('log'); L.value += '['+t+'] '+m+'\n'; L.scrollTop = 1e9; }
+function setStatus(t, ok){ const s = $('st'); s.textContent = t; s.className = 'pill' + (ok===true?' ok':ok===false?' bad':''); }
+function setP(t){ $('ptxt').textContent = t; }
+
+/* ---------- تنظیمات ذخیره‌شونده ---------- */
+document.querySelectorAll('[data-save]').forEach(el => {
+  const k = 'pt260:' + el.id, v = LS.get(k);
+  if (v !== null) { if (el.type === 'checkbox') el.checked = v === '1'; else el.value = v; }
+  el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
+});
+document.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => {
+  const [c, d] = b.dataset.prof.split(',');
+  $('chunk').value = c; $('delay').value = d; LS.set('pt260:chunk', c); LS.set('pt260:delay', d);
+});
+$('thv').textContent = $('thr').value;
+$('thr').addEventListener('input', () => { $('thv').textContent = $('thr').value; sched(); });
+['mode','rot','from'].forEach(id => $(id).addEventListener('change', sched));
+
+if (!navigator.bluetooth) $('nobt').hidden = false;
+pdfInit();
+function pdfInit(){ try { if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e){} }
+
+/* ---------- تبدیل صفحه به تصویر تک‌بیتی ---------- */
+let src = { type: null, count: 0, files: [], pdf: null, sig: '' };
+
+function hash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h >>> 0); }
+function sigOf(files){ return hash(files.map(f => f.name + ':' + f.size).join('|')); }
+function loadImg(file){
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => res({ im, u }); im.onerror = () => rej(new Error('تصویر خوانده نشد: ' + file.name)); im.src = u;
+  });
+}
+function fit(draw, sw, sh, rot){
+  const w = rot ? sh : sw, h = rot ? sw : sh;
+  const th = Math.max(1, Math.round(h * W / w));
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = th;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, th);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  if (rot) { x.translate(W, 0); x.rotate(Math.PI / 2); x.drawImage(draw, 0, 0, th, W); }
+  else x.drawImage(draw, 0, 0, W, th);
+  return cv;
+}
+function mono(cv, mode, thr){
+  const w = cv.width, h = cv.height;
+  const d = cv.getContext('2d').getImageData(0, 0, w, h).data;
+  const g = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < g.length; i++, j += 4) g[i] = 0.299 * d[j] + 0.587 * d[j+1] + 0.114 * d[j+2];
+  const bits = new Uint8Array(h * BYTES);
+  if (mode === 'fs') {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, o = g[i], n = o < thr ? 0 : 255, e = o - n;
+      if (n === 0) bits[y * BYTES + (x >> 3)] |= 0x80 >> (x & 7);
+      if (x + 1 < w) g[i+1] += e * 7 / 16;
+      if (y + 1 < h) { if (x > 0) g[i+w-1] += e * 3 / 16; g[i+w] += e * 5 / 16; if (x + 1 < w) g[i+w+1] += e / 16; }
+    }
+  } else {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+      if (g[y * w + x] < thr) bits[y * BYTES + (x >> 3)] |= 0x80 >> (x & 7);
+  }
+  return { bits, h };
+}
+async function buildPage(i){
+  let cv;
+  if (src.type === 'pdf') {
+    const page = await src.pdf.getPage(i + 1);
+    const r = ((page.rotate || 0) + ($('rot').checked ? 90 : 0)) % 360;
+    const v1 = page.getViewport({ scale: 1, rotation: r });
+    const v2 = page.getViewport({ scale: (W * 2) / v1.width, rotation: r });
+    const big = document.createElement('canvas');
+    big.width = Math.round(v2.width); big.height = Math.round(v2.height);
+    const g = big.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, big.width, big.height);
+    await page.render({ canvasContext: g, viewport: v2 }).promise;
+    page.cleanup();
+    cv = fit(big, big.width, big.height, false);
+  } else {
+    const { im, u } = await loadImg(src.files[i]);
+    try { cv = fit(im, im.naturalWidth, im.naturalHeight, $('rot').checked); } finally { URL.revokeObjectURL(u); }
+  }
+  return mono(cv, $('mode').value, +$('thr').value);
+}
+
+/* ---------- ESC/POS ---------- */
+function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
+function tail(){
+  const m = $('after').value;
+  if (m === 'ff') return [0x0c];
+  if (m === 'gsff') return [0x1d, 0x0c];
+  const n = Math.max(0, Math.min(255, +$('lines').value || 0));
+  return n ? [0x1b, 0x64, n] : [];
+}
+function escpos(bits, h){
+  const parts = [new Uint8Array([0x1b, 0x40])];           // ESC @
+  const BAND = 128;
+  for (let y = 0; y < h; y += BAND) {
+    const n = Math.min(BAND, h - y);
+    parts.push(new Uint8Array([0x1d, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, n & 255, n >> 8])); // GS v 0
+    parts.push(bits.subarray(y * BYTES, (y + n) * BYTES));
+  }
+  parts.push(new Uint8Array(tail()));
+  return concat(parts);
+}
+
+/* ---------- بلوتوث ---------- */
+let device = null, server = null, chr = null, chars = [], selKey = null;
+const job = { running: false, paused: false, stop: false };
+
+function score(x){
+  let s = 0;
+  if (/ff00|18f0|49535343|ffe0|ffb0|fff0|ae30|e7810a71/.test(x.s)) s += 10;
+  if (x.c.properties.writeWithoutResponse) s += 3;
+  if (x.c.properties.write) s += 1;
+  return s;
+}
+async function openGatt(){
+  setStatus('در حال اتصال…');
+  server = await device.gatt.connect();
+  let services = [];
+  try { services = await server.getPrimaryServices(); } catch(e){ log('getPrimaryServices: ' + e.message); }
+  chars = [];
+  for (const s of services) {
+    let cs = [];
+    try { cs = await s.getCharacteristics(); } catch(e){ log('chars ' + s.uuid + ': ' + e.message); }
+    for (const c of cs) {
+      const p = c.properties;
+      log(s.uuid + ' / ' + c.uuid + ' [' + ['write','writeWithoutResponse','notify','read'].filter(k => p[k]).join(',') + ']');
+      if (p.write || p.writeWithoutResponse) chars.push({ s: s.uuid, c });
+    }
+  }
+  if (!chars.length) { setStatus('کانال نوشتن پیدا نشد', false); throw new Error('کانال قابل‌نوشتن پیدا نشد؛ «گزارش» را برای من بفرست'); }
+  chars.sort((a, b) => score(b) - score(a));
+  let idx = 0;
+  if (selKey) { const k = chars.findIndex(x => x.s + '/' + x.c.uuid === selKey); if (k >= 0) idx = k; }
+  const sel = $('chSel'); sel.innerHTML = '';
+  chars.forEach((x, i) => {
+    const o = document.createElement('option'); o.value = i;
+    o.textContent = x.s.slice(0, 8) + ' / ' + x.c.uuid.slice(0, 8); sel.appendChild(o);
+  });
+  sel.value = idx; $('charRow').hidden = chars.length < 2;
+  chr = chars[idx].c; selKey = chars[idx].s + '/' + chr.uuid;
+  setStatus('متصل: ' + (device.name || 'پرینتر'), true);
+  log('کانال انتخاب‌شده: ' + selKey);
+}
+$('chSel').addEventListener('change', e => {
+  const x = chars[+e.target.value]; chr = x.c; selKey = x.s + '/' + x.c.uuid; log('کانال: ' + selKey);
+});
+async function connect(){
+  if (!navigator.bluetooth) { $('nobt').hidden = false; throw new Error('Web Bluetooth در این مرورگر نیست'); }
+  if (device) { try { await openGatt(); return; } catch(e){ log('اتصال مجدد نشد: ' + e.message); } }
+  try {
+    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: OPT });
+  } catch(e){ setStatus('انتخاب دستگاه لغو شد', false); throw e; }
+  device.addEventListener('gattserverdisconnected', () => { chr = null; setStatus('قطع شد', false); log('اتصال قطع شد'); });
+  selKey = null;
+  await openGatt();
+}
+const isUp = () => device && device.gatt.connected && chr;
+async function ensureConnected(){
+  if (isUp()) return;
+  if (!device) throw new Error('پرینتر متصل نیست');
+  for (let i = 1; i <= 6; i++) {
+    if (job.stop) throw STOP;
+    try { setStatus('اتصال مجدد (' + i + ')…'); await openGatt(); return; }
+    catch(e){ log('اتصال مجدد ' + i + ': ' + e.message); await sleep(1500); }
+  }
+  throw new Error('اتصال مجدد ناموفق بود');
+}
+async function write(chunk){
+  const p = chr.properties;
+  if ($('wmode').value !== 'resp' && p.writeWithoutResponse && chr.writeValueWithoutResponse) return chr.writeValueWithoutResponse(chunk);
+  if (chr.writeValueWithResponse) return chr.writeValueWithResponse(chunk);
+  return chr.writeValue(chunk);
+}
+async function gate(){
+  if (job.stop) throw STOP;
+  while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
+}
+async function sendAll(data){
+  const cs = Math.max(10, +$('chunk').value || 100), dl = Math.max(0, +$('delay').value || 0);
+  for (let i = 0; i < data.length; i += cs) {
+    await gate();
+    await write(data.subarray(i, i + cs));
+    if (dl) await sleep(dl);
+  }
+}
+async function printWithRetry(data){
+  let last = null;
+  for (let a = 1; a <= 4; a++) {
+    try { await ensureConnected(); await sendAll(data); return; }
+    catch(e){
+      if (e === STOP) throw e;
+      last = e; log('خطای ارسال (تلاش ' + a + '): ' + e.message);
+      chr = null; await sleep(1200);
+    }
+  }
+  throw last || new Error('ارسال ناموفق');
+}
+
+/* ---------- فایل و پیش‌نمایش ---------- */
+let pt = null, pvTok = 0;
+function sched(){ clearTimeout(pt); pt = setTimeout(updatePreview, 250); }
+async function updatePreview(){
+  if (!src.count) return;
+  const tok = ++pvTok;
+  try {
+    const p = Math.min(Math.max(1, +$('from').value || 1), src.count) - 1;
+    const { bits, h } = await buildPage(p);
+    if (tok !== pvTok) return;
+    const cv = $('pv'); cv.width = W; cv.height = h;
+    const ctx = cv.getContext('2d'), im = ctx.createImageData(W, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < W; x++) {
+      const v = ((bits[y * BYTES + (x >> 3)] >> (7 - (x & 7))) & 1) ? 0 : 255, o = (y * W + x) * 4;
+      im.data[o] = im.data[o+1] = im.data[o+2] = v; im.data[o+3] = 255;
+    }
+    ctx.putImageData(im, 0, 0);
+  } catch(e){ log('پیش‌نمایش: ' + e.message); }
+}
+$('file').addEventListener('change', async e => {
+  const fs = [...e.target.files]; if (!fs.length) return;
+  $('info').textContent = 'در حال خواندن…';
+  try {
+    const pdfs = fs.filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+    if (pdfs.length) {
+      if (!window.pdfjsLib) throw new Error('کتابخانه‌ی PDF بارگذاری نشد (اینترنت؟)');
+      pdfInit();
+      const f = pdfs[0];
+      const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+      src = { type: 'pdf', pdf, files: [f], count: pdf.numPages, sig: sigOf([f]) };
+    } else {
+      const imgs = fs.filter(f => f.type.startsWith('image/')).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      if (!imgs.length) throw new Error('فایل پشتیبانی‌شده‌ای انتخاب نشد');
+      src = { type: 'img', pdf: null, files: imgs, count: imgs.length, sig: sigOf(imgs) };
+    }
+    const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
+    $('to').value = src.count;
+    $('to').max = $('from').max = src.count;
+    let note = src.count + ' برگ آماده است';
+    if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
+    else $('from').value = 1;
+    $('info').textContent = note;
+    log('فایل: ' + src.type + ' / ' + src.count + ' برگ');
+    updatePreview();
+  } catch(err){
+    src = { type: null, count: 0, files: [], pdf: null, sig: '' };
+    $('info').textContent = 'خطا: ' + err.message; log('فایل: ' + err.message);
+  }
+});
+
+/* ---------- صف چاپ ---------- */
+function ui(run){
+  $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
+  if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; }
+}
+async function startJob(){
+  if (!src.count) { alert('اول فایل را انتخاب کن'); return; }
+  const from = Math.max(1, +$('from').value || 1), to = Math.min(src.count, +$('to').value || src.count);
+  const copies = Math.max(1, +$('copies').value || 1);
+  if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
+  job.running = true; job.paused = false; job.stop = false; ui(true);
+  const total = (to - from + 1) * copies; let done = 0, wl = null;
+  $('prog').max = total; $('prog').value = 0;
+  try {
+    if (!isUp()) await connect();
+    try { wl = await navigator.wakeLock.request('screen'); } catch(e){}
+    for (let p = from; p <= to; p++) {
+      await gate();
+      setP('برگ ' + p + ' از ' + to + ' — آماده‌سازی…');
+      const { bits, h } = await buildPage(p - 1);
+      const data = escpos(bits, h);
+      for (let c = 1; c <= copies; c++) {
+        setP('برگ ' + p + ' از ' + to + (copies > 1 ? ' (کپی ' + c + '/' + copies + ')' : '') + ' — در حال چاپ');
+        await printWithRetry(data);
+        done++; $('prog').value = done;
+      }
+      LS.set('pt260p:' + src.sig, String(p));
+    }
+    LS.set('pt260p:' + src.sig, '0');
+    setP('✓ چاپ تمام شد (' + total + ' برگ)');
+  } catch(e){
+    if (e === STOP) setP('لغو شد — دفعه‌ی بعد از همین‌جا ادامه می‌دهد');
+    else { setP('خطا: ' + e.message); log('ERR ' + e.message); }
+  } finally {
+    job.running = false; ui(false);
+    try { wl && wl.release(); } catch(e){}
+  }
+}
+
+/* ---------- چاپ تست ---------- */
+function testCanvas(){
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = 250;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, 250);
+  x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineWidth = 3; x.strokeRect(2, 2, W - 4, 246);
+  for (let i = 0; i <= W; i += 32) x.fillRect(Math.min(i, W - 2), 0, 2, i % 64 === 0 ? 26 : 13);
+  x.textAlign = 'center';
+  x.font = 'bold 42px sans-serif'; x.fillText('PT-260 OK', W / 2, 95);
+  x.direction = 'rtl'; x.font = 'bold 32px sans-serif'; x.fillText('تست چاپ فارسی', W / 2, 150);
+  x.direction = 'ltr'; x.font = '20px monospace'; x.fillText('384 dots = 48 mm', W / 2, 195);
+  x.fillText('|<--------- 384 --------->|', W / 2, 228);
+  return cv;
+}
+
+/* ---------- رویدادها ---------- */
+$('bConn').onclick = async () => { try { await connect(); } catch(e){ log('اتصال: ' + e.message); if (e.name !== 'NotFoundError') setStatus('خطا: ' + e.message, false); } };
+$('bNew').onclick = async () => {
+  try { if (device && device.gatt.connected) device.gatt.disconnect(); } catch(e){}
+  device = null; chr = null; selKey = null;
+  try { await connect(); } catch(e){ log('اتصال: ' + e.message); }
+};
+$('bTest').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!isUp()) await connect();
+    const { bits, h } = mono(testCanvas(), 'th', 128);
+    await printWithRetry(escpos(bits, h));
+    log('چاپ تست ارسال شد');
+  } catch(e){ log('چاپ تست: ' + e.message); setStatus('خطا: ' + e.message, false); }
+};
+$('bStart').onclick = startJob;
+$('bPause').onclick = () => {
+  job.paused = !job.paused;
+  $('bPause').textContent = job.paused ? 'ادامه' : 'توقف موقت';
+  setP(job.paused ? 'متوقف شد' : 'ادامه…');
+};
+$('bStop').onclick = () => { job.stop = true; job.paused = false; };
+$('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('log').value); } catch(e){ $('log').select(); } };
+</script>
+</body>
+</html>
