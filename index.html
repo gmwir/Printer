@@ -114,8 +114,8 @@ const W = 384, BYTES = W / 8;               // ۵۸ میلی‌متر، ۲۰۳dp
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const STOP = new Error('stop');
-const OPT = [0xff00,0xff01,0xff02,0xffe0,0xffe1,0xffe5,0xfff0,0xffb0,0xffc0,0xff12,0xfee7,0xae00,0xae30,0x18f0,
-  '49535343-fe7d-4ae5-8fa9-9fafd205e455','e7810a71-73ae-499d-8c15-faa9aef0c3f2','bef8d6c9-9c21-4c9e-b632-bd58c1009f9f'];
+const S18F0 = '000018f0-0000-1000-8000-00805f9b34fb';
+const OPT = [S18F0, 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
 
 const LS = {
   get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
@@ -275,7 +275,7 @@ async function connect(mode){
   try {
     const opts = mode === 'all'
       ? { acceptAllDevices: true, optionalServices: OPT }
-      : { filters: [{ services: [0x18f0] }, { namePrefix: 'PT-' }], optionalServices: OPT };
+      : { filters: [{ services: [S18F0] }, { namePrefix: 'PT-' }], optionalServices: OPT };
     log('requestDevice: ' + (mode === 'all' ? 'همه دستگاه‌ها' : 'فیلتر PT / 18F0'));
     device = await navigator.bluetooth.requestDevice(opts);
   } catch(e){ log('requestDevice خطا: ' + errText(e)); setStatus('دستگاه انتخاب نشد: ' + errText(e), false); throw e; }
