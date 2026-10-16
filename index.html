@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۸</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۹</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -50,12 +50,13 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
+  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
 <div class="card">
   <h2>۲) فایل</h2>
-  <input type="file" id="file" accept="application/pdf,image/*" multiple>
+  <input type="file" id="file" accept="application/pdf,image/*,.csv,text/csv,text/plain" multiple>
+  <div class="row"><label>حالت PDF<select id="gm" data-save><option value="auto">خودکار: شبکه‌ی لیبل روی صفحه (هر خانه = یک لیبل)</option><option value="page">هر صفحه = یک لیبل</option></select></label></div>
   <div class="row"><span class="pill" id="info">فایلی انتخاب نشده</span></div>
   <canvas id="pv" width="384" height="10"></canvas>
   <div class="row">
@@ -94,6 +95,8 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       <select id="after" data-save>
         <option value="lines">فید چند خط</option>
         <option value="ff">FF (رفتن به لیبل بعد)</option>
+        <option value="feedgap">فید معادل فاصله‌ی لیبل (ESC J)</option>
+        <option value="none">هیچ (بدون فید)</option>
         <option value="gsff">GS FF (لیبل بعد)</option>
       </select>
     </label>
@@ -123,10 +126,10 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   </div>
   <div class="row">
     <label>عرض لیبل (mm)<input type="number" id="lw" value="58" min="10" max="120" inputmode="numeric" data-save></label>
-    <label>ارتفاع لیبل (mm، ۰ = خودکار)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
-    <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="2" min="0" max="25" inputmode="numeric" data-save></label>
+    <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
+    <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="3" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
-  <label class="chk"><input type="checkbox" id="ntf" data-save checked> فعال‌سازی اعلان‌های پرینتر (تشخیص)</label>
+  <label class="chk"><input type="checkbox" id="ntf" data-save> فعال‌سازی اعلان‌های پرینتر (تشخیص)</label>
   <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
     <div class="row"><label>بعد از قطع شدن، ادامه از
       <select id="resume" data-save>
@@ -160,7 +163,7 @@ function setP(t){ big(t); }
 function short(u){ u = String(u).toUpperCase(); return /^0000[0-9A-F]{4}-0000-1000-8000-00805F9B34FB$/.test(u) ? u.slice(4,8) : (u.length > 8 ? u.slice(0,8) : u); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
-if (LS.get('pt260:ver') !== '18') { ['chunk','delay','wmode','resume','q','ntf','win'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '18'); }
+if (LS.get('pt260:ver') !== '19') { ['chunk','delay','wmode','resume','q','ntf','win','lh','gapmm','gm'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '19'); }
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
 document.querySelectorAll('[data-save]').forEach(el => {
   const k = 'pt260:' + el.id, v = LS.get(k);
@@ -181,6 +184,212 @@ $('thr').addEventListener('input', () => { $('thv').textContent = $('thr').value
 if (!navigator.bluetooth) $('nobt').hidden = false;
 pdfInit();
 function pdfInit(){ try { if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e){} }
+
+/* ---------- تحلیل شبکه‌ی لیبل (خانه‌ها و QR) ---------- */
+function gRuns(proj){ const r = []; let s = -1; for (let i = 0; i < proj.length; i++) { if (proj[i] > 0) { if (s < 0) s = i; } else if (s >= 0) { r.push([s, i - 1]); s = -1; } } if (s >= 0) r.push([s, proj.length - 1]); return r; }
+function gMerge(r, dim){
+  if (r.length < 2) return r;
+  const gaps = []; for (let i = 1; i < r.length; i++) gaps.push(r[i][0] - r[i-1][1] - 1);
+  const th = Math.max(dim * 0.012, Math.max.apply(null, gaps) * 0.5);
+  const o = [r[0].slice()];
+  for (let i = 1; i < r.length; i++) { if (gaps[i-1] < th) o[o.length-1][1] = r[i][1]; else o.push(r[i].slice()); }
+  return o;
+}
+function gRegular(runs){
+  if (!runs.length) return false;
+  const ws = runs.map(r => r[1] - r[0] + 1), mean = ws.reduce((a, b) => a + b, 0) / ws.length;
+  return ws.every(x => Math.abs(x - mean) <= mean * 0.2);
+}
+function gQR(gray, w, x0, y0, bw, bh){
+  if (Math.abs(bw - bh) > Math.max(3, bw * 0.04)) return null;
+  const dk = (x, y) => gray[y * w + x] < 128;
+  let bestM = null, bestScore = -1;
+  for (let v = 1; v <= 40; v++) {
+    const N = 17 + 4 * v, sx = bw / N, sy = bh / N;
+    if (sx < 2) break;
+    const mods = new Uint8Array(N * N);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const cx = Math.min(w - 1, Math.round(x0 + (j + 0.5) * sx)), cy = Math.round(y0 + (i + 0.5) * sy);
+      mods[i * N + j] = dk(cx, cy) ? 1 : 0;
+    }
+    const fin = (r0, c0) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const edge = i === 0 || i === 6 || j === 0 || j === 6, core = i >= 2 && i <= 4 && j >= 2 && j <= 4; if (mods[(r0 + i) * N + c0 + j] !== ((edge || core) ? 1 : 0)) return false; } return true; };
+    if (!fin(0, 0) || !fin(0, N - 7) || !fin(N - 7, 0)) continue;
+    let ok = 0, tot = 0;
+    for (let k = 8; k <= N - 9; k++) { const e = (k % 2 === 0) ? 1 : 0; tot += 2; if (mods[6 * N + k] === e) ok++; if (mods[k * N + 6] === e) ok++; }
+    const score = tot ? ok / tot : 1;
+    if (score >= 0.9 && score > bestScore) { bestScore = score; bestM = { N, mods, score }; }
+  }
+  return bestM;
+}
+function analyzeGray(gray, w, h){
+  const colP = new Uint32Array(w), rowP = new Uint32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) { colP[x]++; rowP[y]++; }
+  const cr = gMerge(gRuns(colP), w), rr = gMerge(gRuns(rowP), h);
+  const grid = cr.length * rr.length >= 2 && gRegular(cr) && gRegular(rr);
+  const cells = [];
+  if (!grid) return { grid: false, cells, cols: cr.length, rows: rr.length };
+  for (const r of rr) for (const c of cr) {
+    let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+    for (let y = r[0]; y <= r[1]; y++) for (let x = c[0]; x <= c[1]; x++) if (gray[y * w + x] < 110) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) continue;
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, qr = gQR(gray, w, x0, y0, bw, bh);
+    const cell = { x0, y0, bw, bh };
+    if (qr) { cell.N = qr.N; cell.mods = qr.mods; }
+    else { cell.bm = new Uint8Array(bw * bh); for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) cell.bm[y * bw + x] = gray[(y0 + y) * w + x0 + x]; }
+    cells.push(cell);
+  }
+  return { grid: true, cells, cols: cr.length, rows: rr.length };
+}
+
+/* ---------- تولید QR (حالت بایت، سطح L/M، نسخه ۱ تا ۱۰، بدون کتابخانه‌ی بیرونی) ---------- */
+const QR_ECC = { L: { fmt: 1, per: [7,10,15,20,26,18,20,24,30,18], blk: [1,1,1,1,1,2,2,2,2,4] },
+                 M: { fmt: 0, per: [10,16,26,18,24,16,18,22,22,26], blk: [1,1,1,2,2,4,4,4,5,5] } };
+function qrRaw(v){ let r = (16 * v + 128) * v + 64; if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; }
+function gfMul(x, y){ let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z & 255; }
+function rsDiv(deg){ const r = new Array(deg).fill(0); r[deg - 1] = 1; let root = 1; for (let i = 0; i < deg; i++) { for (let j = 0; j < r.length; j++) { r[j] = gfMul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; } root = gfMul(root, 2); } return r; }
+function rsRem(data, div){ const r = new Array(div.length).fill(0); for (const b of data) { const f = b ^ r.shift(); r.push(0); div.forEach((c, i) => { r[i] ^= gfMul(c, f); }); } return r; }
+function qrEncode(text, level){
+  const E = QR_ECC[level || 'M'], bytes = Array.from(new TextEncoder().encode(text));
+  let ver = 0;
+  for (let v = 1; v <= 10; v++) { const cap = Math.floor(qrRaw(v) / 8) - E.per[v-1] * E.blk[v-1]; if (4 + (v < 10 ? 8 : 16) + bytes.length * 8 <= cap * 8) { ver = v; break; } }
+  if (!ver) throw new Error('متن QR بیش از حد طولانی است');
+  const size = ver * 4 + 17, cap = Math.floor(qrRaw(ver) / 8) - E.per[ver-1] * E.blk[ver-1];
+  const bits = []; const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+  put(4, 4); put(bytes.length, ver < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+  put(0, Math.min(4, cap * 8 - bits.length)); while (bits.length % 8) bits.push(0);
+  for (let p = 0xEC; bits.length < cap * 8; p ^= 0xEC ^ 0x11) put(p, 8);
+  const data = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b); }
+  const nb = E.blk[ver-1], eccLen = E.per[ver-1], raw = Math.floor(qrRaw(ver) / 8), nShort = nb - raw % nb, shortLen = Math.floor(raw / nb), div = rsDiv(eccLen), blocks = [];
+  for (let i = 0, k = 0; i < nb; i++) { const dat = data.slice(k, k + shortLen - eccLen + (i < nShort ? 0 : 1)); k += dat.length; const ecc = rsRem(dat, div); if (i < nShort) dat.push(0); blocks.push(dat.concat(ecc)); }
+  const all = []; for (let i = 0; i < blocks[0].length; i++) blocks.forEach((b, j) => { if (i !== shortLen - eccLen || j >= nShort) all.push(b[i]); });
+  const mod = Array.from({ length: size }, () => new Array(size).fill(false)), fn = Array.from({ length: size }, () => new Array(size).fill(false));
+  const setF = (x, y, d) => { mod[y][x] = d; fn[y][x] = true; };
+  for (let i = 0; i < size; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+  const finder = (cx, cy) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy; if (x >= 0 && x < size && y >= 0 && y < size) setF(x, y, d !== 2 && d !== 4); } };
+  finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+  const ap = []; if (ver > 1) { const n = Math.floor(ver / 7) + 2, step = Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2; ap.push(6); for (let p = size - 7; ap.length < n; p -= step) ap.splice(1, 0, p); }
+  ap.forEach((a, i) => ap.forEach((b, j) => { if ((i === 0 && j === 0) || (i === 0 && j === ap.length - 1) || (i === ap.length - 1 && j === 0)) return; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setF(a + dx, b + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }));
+  const gb = (v, i) => ((v >>> i) & 1) !== 0;
+  const fmt = mask => {
+    const d = (E.fmt << 3) | mask; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537); const b = ((d << 10) | r) ^ 0x5412;
+    for (let i = 0; i <= 5; i++) setF(8, i, gb(b, i)); setF(8, 7, gb(b, 6)); setF(8, 8, gb(b, 7)); setF(7, 8, gb(b, 8));
+    for (let i = 9; i < 15; i++) setF(14 - i, 8, gb(b, i));
+    for (let i = 0; i < 8; i++) setF(size - 1 - i, 8, gb(b, i));
+    for (let i = 8; i < 15; i++) setF(8, size - 15 + i, gb(b, i));
+    setF(8, size - 8, true);
+  };
+  fmt(0);
+  if (ver >= 7) { let r = ver; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25); const b = (ver << 12) | r; for (let i = 0; i < 18; i++) { const a = size - 11 + i % 3, c = Math.floor(i / 3); setF(a, c, gb(b, i)); setF(c, a, gb(b, i)); } }
+  for (let i = 0, right = size - 1; right >= 1; right -= 2) { if (right === 6) right = 5; for (let v = 0; v < size; v++) for (let j = 0; j < 2; j++) { const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - v : v; if (!fn[y][x] && i < all.length * 8) { mod[y][x] = gb(all[i >>> 3], 7 - (i & 7)); i++; } } }
+  const mk = [(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const apply = m => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fn[y][x] && mk[m](x, y)) mod[y][x] = !mod[y][x]; };
+  const penalty = () => {
+    let p = 0;
+    for (let y = 0; y < size; y++) { let run = 1; for (let x = 1; x < size; x++) { if (mod[y][x] === mod[y][x-1]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (let x = 0; x < size; x++) { let run = 1; for (let y = 1; y < size; y++) { if (mod[y][x] === mod[y-1][x]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) { const c = mod[y][x]; if (c === mod[y][x+1] && c === mod[y+1][x] && c === mod[y+1][x+1]) p += 3; }
+    let dark = 0; mod.forEach(r => r.forEach(c => { if (c) dark++; })); p += Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size)) * 10;
+    return p;
+  };
+  let best = 0, bp = 1e9;
+  for (let m = 0; m < 8; m++) { apply(m); fmt(m); const p = penalty(); if (p < bp) { bp = p; best = m; } apply(m); }
+  apply(best); fmt(best);
+  const mods = new Uint8Array(size * size); for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) mods[y * size + x] = mod[y][x] ? 1 : 0;
+  return { N: size, mods };
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  text = String(text).replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  let delim = ',', bc = -1;
+  [',', ';', '\t', '|'].forEach(d => { const c = first.split(d).length - 1; if (c > bc) { bc = c; delim = d; } });
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(c => c.trim() !== '')) rows.push(row); row = []; }
+    else cur += ch;
+  }
+  row.push(cur); if (row.some(c => c.trim() !== '')) rows.push(row);
+  if (!rows.length) return { rows: [], error: 'فایل CSV خالی است' };
+  const reCode = /^(id|code|sku|qr|barcode|item|شناسه|کد|بارکد|کدکالا|کد کالا)/i, reName = /(name|title|desc|نام|عنوان|شرح|محصول|کالا)/i;
+  const head = rows[0].map(c => c.trim());
+  let ci = head.findIndex(c => reCode.test(c)), ni = head.findIndex((c, i) => i !== ci && reName.test(c)), start = 1;
+  if (ci < 0 && ni < 0) { ci = 0; ni = head.length > 1 ? 1 : -1; start = 0; }
+  else { if (ci < 0) ci = ni === 0 ? 1 : 0; }
+  const seen = new Set(), out = []; let empty = 0, dup = 0, long = 0;
+  for (let i = start; i < rows.length; i++) {
+    const code = (rows[i][ci] || '').trim(), name = ni >= 0 ? (rows[i][ni] || '').trim() : '';
+    if (!code) { empty++; continue; }
+    if (new TextEncoder().encode(code).length > 200) { long++; continue; }
+    if (seen.has(code)) dup++; seen.add(code);
+    out.push({ code, name });
+  }
+  return { rows: out, empty, dup, long, ci, ni, head, delim, hasHeader: start === 1 };
+}
+const LH = () => Math.max(10, +$('lh').value || 30);
+const lcan = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); return c; };
+function drawQR(cv, mods, N, x0, y0, wMax, hMax, quiet, even){
+  let k = Math.floor(Math.min(wMax, hMax) / (N + 2 * quiet));
+  if (even && k > 1) k -= k % 2;
+  if (k < 1) return 0;
+  const x = cv.getContext('2d'); x.fillStyle = '#000';
+  const ox = x0 + Math.floor((wMax - N * k) / 2), oy = y0 + Math.floor((hMax - N * k) / 2);
+  for (let i = 0; i < N; i++) { let j = 0; while (j < N) { if (mods[i * N + j]) { let e = j; while (e < N && mods[i * N + e]) e++; x.fillRect(ox + j * k, oy + i * k, (e - j) * k, k); j = e; } else j++; } }
+  return k;
+}
+function cellLabel(cell){
+  const H = LH() * 8, cv = lcan(W, H), even = $('q').value !== '1';
+  if (cell.mods) { if (drawQR(cv, cell.mods, cell.N, 0, 0, W, H - 8, 3, even)) return cv; }
+  const g = lcan(cell.bw, cell.bh), gx = g.getContext('2d'), im = gx.createImageData(cell.bw, cell.bh);
+  for (let i = 0; i < cell.bm.length; i++) { const v = cell.bm[i]; im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = v; im.data[i*4+3] = 255; }
+  gx.putImageData(im, 0, 0);
+  const s = Math.min((W - 16) / cell.bw, (H - 12) / cell.bh), dw = Math.round(cell.bw * s), dh = Math.round(cell.bh * s), x = cv.getContext('2d');
+  x.imageSmoothingEnabled = true; x.drawImage(g, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
+  return cv;
+}
+function wrapText(x, text, maxW, maxLines){
+  const words = text.split(/\s+/), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (x.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.?.?$/, '…'); }
+  return lines;
+}
+function csvLabel(row){
+  const H = LH() * 8, cv = lcan(W, H), even = $('q').value !== '1', qr = qrEncode(row.code, 'M');
+  const qw = Math.min(W - 150, H - 8), x = cv.getContext('2d');
+  const k = drawQR(cv, qr.mods, qr.N, 4, 4, qw, H - 8, 2, even), used = k ? k * (qr.N + 4) : qw;
+  x.fillStyle = '#000'; x.direction = 'rtl'; x.textAlign = 'right'; x.textBaseline = 'top';
+  const tx = W - 8, tw = W - used - 24;
+  if (tw > 60 && row.name) {
+    x.font = 'bold 28px Tahoma, sans-serif';
+    const ls = wrapText(x, row.name, tw, 4);
+    ls.forEach((l, i) => x.fillText(l, tx, 14 + i * 36));
+  }
+  x.direction = 'ltr'; x.textAlign = 'right'; x.textBaseline = 'bottom'; x.font = 'bold 22px monospace';
+  if (tw > 60) x.fillText(row.code.slice(0, 14), tx, H - 8);
+  return cv;
+}
+async function analyzePdf(pdf, onProg){
+  const items = []; let grids = 0;
+  for (let p = 1; p <= pdf.numPages; p++) {
+    onProg(p, pdf.numPages);
+    const page = await pdf.getPage(p), v1 = page.getViewport({ scale: 1 });
+    const v = page.getViewport({ scale: Math.min(2, 2000 / Math.max(v1.width, v1.height)) });
+    const cv = lcan(Math.round(v.width), Math.round(v.height)), g = cv.getContext('2d');
+    await page.render({ canvasContext: g, viewport: v }).promise; page.cleanup();
+    const d = g.getImageData(0, 0, cv.width, cv.height).data, gray = new Uint8Array(cv.width * cv.height);
+    for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j] * 299 + d[j+1] * 587 + d[j+2] * 114) / 1000;
+    const r = analyzeGray(gray, cv.width, cv.height);
+    if (r.grid && r.cells.length) { grids++; r.cells.forEach(c => items.push({ page: p - 1, cell: c })); }
+    else items.push({ page: p - 1, cell: null });
+    await sleep(0);
+  }
+  return { items, grids };
+}
 
 /* ---------- تبدیل صفحه به تصویر تک‌بیتی ---------- */
 let src = { type: null, count: 0, files: [], pdf: null, sig: '' };
@@ -225,8 +434,18 @@ function mono(cv, mode, thr){
 }
 async function buildPage(i){
   let cv;
+  if (src.type === 'csv') {
+    cv = csvLabel(src.rows[i]);
+    if ($('rot180').checked) cv = rotate180(cv);
+    return mono(cv, 'th', 128);
+  }
+  if (src.type === 'pdf' && src.items && src.items[i] && src.items[i].cell) {
+    cv = cellLabel(src.items[i].cell);
+    if ($('rot180').checked) cv = rotate180(cv);
+    return mono(cv, 'th', 128);
+  }
   if (src.type === 'pdf') {
-    const page = await src.pdf.getPage(i + 1);
+    const page = await src.pdf.getPage((src.items ? src.items[i].page : i) + 1);
     const r = ((page.rotate || 0) + ($('rot').checked ? 90 : 0)) % 360;
     const v1 = page.getViewport({ scale: 1, rotation: r });
     const v2 = page.getViewport({ scale: (W * 2) / v1.width, rotation: r });
@@ -266,6 +485,8 @@ function tail(){
   const m = $('after').value;
   if (m === 'ff') return [0x0c];
   if (m === 'gsff') return [0x1d, 0x0c];
+  if (m === 'none') return [];
+  if (m === 'feedgap') return [0x1b, 0x4a, Math.max(1, Math.min(255, Math.round((+$('gapmm').value || 3) * 8)))];
   const n = Math.max(0, Math.min(255, +$('lines').value || 0));
   return n ? [0x1b, 0x64, n] : [];
 }
@@ -297,7 +518,7 @@ function tsplJob(bits, h){
   const enc = new TextEncoder();
   const lh = Math.max(0, +$('lh').value || 0), lw = Math.max(10, +$('lw').value || 58), gap = Math.max(0, +$('gapmm').value || 0);
   const hm = lh || Math.max(1, Math.ceil(h / 8));
-  const gapLine = lh ? 'GAP ' + gap + ' mm,0 mm' : 'GAP 0 mm,0 mm';
+  const gapLine = (lh || h === LH() * 8) ? 'GAP ' + gap + ' mm,0 mm' : 'GAP 0 mm,0 mm';
   const data = $('inv').checked ? bits.map(b => b ^ 0xFF) : bits;
   const head = 'SIZE ' + lw + ' mm,' + hm + ' mm\r\n' + gapLine + '\r\nDIRECTION 0\r\nCLS\r\nBITMAP 0,0,' + BYTES + ',' + h + ',0,';
   return concat([enc.encode(head), data, enc.encode('\r\nPRINT 1,1\r\n')]);
@@ -354,6 +575,7 @@ async function openChar(idx){
   chr = await svc.getCharacteristic(k.c);
   curIdx = idx; tConn = Date.now();
   setStatus('متصل: ' + (device.name || 'پرینتر') + ' (' + k.n + ')', true);
+  await sleep(350);
   if ($('ntf').checked) {
     try {
       const cs = await withTimeout(svc.getCharacteristics(), 4000);
@@ -525,33 +747,57 @@ async function updatePreview(){
     ctx.putImageData(im, 0, 0);
   } catch(e){ log('پیش‌نمایش: ' + e.message); }
 }
+async function pdfMode(){
+  if (src.type !== 'pdf') return '';
+  if ($('gm').value === 'page') { src.items = null; src.count = src.pdf.numPages; return src.count + ' برگ (هر صفحه = یک لیبل)'; }
+  const a = await analyzePdf(src.pdf, (p, n) => { $('info').textContent = 'تحلیل صفحه ' + p + ' از ' + n + '…'; });
+  src.items = a.items; src.count = a.items.length;
+  const q = a.items.filter(x => x.cell && x.cell.mods).length, fb = a.items.filter(x => x.cell && !x.cell.mods).length;
+  let note = src.count + ' لیبل از ' + src.pdf.numPages + ' صفحه';
+  if (a.grids) note += ' (شبکه‌ی لیبل در ' + a.grids + ' صفحه' + (q ? '، ' + q + ' QR با ساختار معتبر' : '') + (fb ? '، ' + fb + ' خانه به‌صورت تصویر' : '') + ')';
+  else note += ' (شبکه‌ای پیدا نشد؛ هر صفحه یک لیبل)';
+  return note;
+}
+async function afterLoad(note){
+  const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
+  $('to').value = src.count; $('to').max = $('from').max = src.count;
+  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
+  else $('from').value = 1;
+  $('info').textContent = note; log('فایل: ' + src.type + ' / ' + src.count + ' لیبل');
+  updatePreview();
+}
+$('gm').addEventListener('change', async () => { if (src.type === 'pdf') { try { await afterLoad(await pdfMode()); } catch(err){ $('info').textContent = 'خطا: ' + err.message; } } });
 $('file').addEventListener('change', async e => {
   const fs = [...e.target.files]; if (!fs.length) return;
   $('info').textContent = 'در حال خواندن…';
   try {
     const pdfs = fs.filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+    const csvs = fs.filter(f => /\.(csv|tsv)$/i.test(f.name) || f.type === 'text/csv');
+    let note = '';
     if (pdfs.length) {
       if (!window.pdfjsLib) throw new Error('کتابخانه‌ی PDF بارگذاری نشد (اینترنت؟)');
       pdfInit();
       const f = pdfs[0];
       const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
-      src = { type: 'pdf', pdf, files: [f], count: pdf.numPages, sig: sigOf([f]) };
+      src = { type: 'pdf', pdf, items: null, files: [f], count: pdf.numPages, sig: sigOf([f]) };
+      note = await pdfMode();
+    } else if (csvs.length) {
+      const f = csvs[0], buf = await f.arrayBuffer();
+      let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch(_) { text = new TextDecoder('windows-1256').decode(buf); }
+      const r = parseCSV(text);
+      if (!r.rows.length) throw new Error(r.error || 'ردیف معتبری در CSV پیدا نشد');
+      src = { type: 'csv', pdf: null, items: null, rows: r.rows, files: [f], count: r.rows.length, sig: sigOf([f]) };
+      note = r.rows.length + ' لیبل از CSV (ستون کد: ' + (r.head[r.ci] || (r.ci + 1)) + (r.ni >= 0 ? '، نام: ' + (r.head[r.ni] || (r.ni + 1)) : '') + ')';
+      if (r.dup) note += ' — ' + r.dup + ' کد تکراری'; if (r.empty) note += ' — ' + r.empty + ' ردیف بدون کد حذف شد'; if (r.long) note += ' — ' + r.long + ' کد خیلی طولانی حذف شد';
     } else {
       const imgs = fs.filter(f => f.type.startsWith('image/')).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
       if (!imgs.length) throw new Error('فایل پشتیبانی‌شده‌ای انتخاب نشد');
-      src = { type: 'img', pdf: null, files: imgs, count: imgs.length, sig: sigOf(imgs) };
+      src = { type: 'img', pdf: null, items: null, files: imgs, count: imgs.length, sig: sigOf(imgs) };
+      note = imgs.length + ' برگ آماده است';
     }
-    const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
-    $('to').value = src.count;
-    $('to').max = $('from').max = src.count;
-    let note = src.count + ' برگ آماده است';
-    if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
-    else $('from').value = 1;
-    $('info').textContent = note;
-    log('فایل: ' + src.type + ' / ' + src.count + ' برگ');
-    updatePreview();
+    await afterLoad(note);
   } catch(err){
-    src = { type: null, count: 0, files: [], pdf: null, sig: '' };
+    src = { type: null, count: 0, files: [], pdf: null, items: null, sig: '' };
     $('info').textContent = 'خطا: ' + err.message; log('فایل: ' + err.message);
   }
 });
@@ -561,6 +807,9 @@ function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
+const profKey = () => [device && device.name, $('lw').value, $('lh').value, $('gapmm').value, $('lang').value, $('after').value, $('q').value].join('|');
+const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
+const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
 async function wakeOn(){ try { wlk = await navigator.wakeLock.request('screen'); } catch(e){} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && job.running) wakeOn(); });
@@ -573,6 +822,7 @@ async function startJob(){
   Object.assign(PS, { disc: 0, rec: 0, bytes: 0, t0: Date.now(), delay: null, cleanPages: 0, label: '', page: from });
   const total = (to - from + 1) * copies; let done = 0;
   $('prog').max = total; $('prog').value = 0;
+  let gateDone = false;
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
@@ -590,6 +840,11 @@ async function startJob(){
         PS.label = meta.label;
         await printUnit(data, undefined, meta);
         done++; $('prog').value = done; statsLine();
+        if (!gateDone && total > 1 && !isOk()) {
+          gateDone = true; big('✋ لیبل اول چاپ شد؛ منتظر تأیید تو (بررسی هم‌ترازی)', 'warn'); await sleep(1500);
+          if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف (هدررفت لیبل نداشته باش)')) { job.stop = true; throw STOP; }
+          markOk(); log('هم‌ترازی تأیید شد: ' + profKey());
+        }
       }
       LS.set('pt260p:' + src.sig, String(p));
     }
@@ -700,6 +955,36 @@ $('bBench').onclick = async () => {
     log('پایان تست. هر برچسب که کامل و بدون اعوجاج چاپ شد یعنی همان ترکیب (اندازه/پنجره) سالم است. سریع‌ترین ترکیب سالم را از لاگ انتخاب کن؛ X2 و X4 هم اگر سالم بودند حالت کم‌حجم پشتیبانی می‌شود');
     setStatus('تست سرعت تمام شد', true);
   } catch(e){ log('تست سرعت: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
+};
+$('bCal').onclick = async () => {
+  const saved = { after: $('after').value, lang: $('lang').value };
+  try {
+    job.stop = false; job.paused = false;
+    if (!isUp()) await connect('filter');
+    const H = LH() * 8;
+    const frame = txt => {
+      const cv = lcan(W, H), x = cv.getContext('2d'); x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineWidth = 4; x.strokeRect(2, 2, W - 4, H - 4);
+      for (let i = 0; i <= W; i += 24) x.fillRect(Math.min(i, W - 2), 0, 2, i % 96 === 0 ? 22 : 10);
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = 'bold 64px sans-serif'; x.fillText(txt.slice(0, 2), W / 2, H / 2 - 14);
+      x.font = '22px sans-serif'; x.fillText(txt.slice(3), W / 2, H / 2 + 44);
+      return mono(cv, 'th', 128);
+    };
+    const ms = [['A', 'بدون فرمان', 'escpos', 'none'], ['B', 'FF', 'escpos', 'ff'], ['C', 'GS FF', 'escpos', 'gsff'], ['D', 'فید معادل فاصله', 'escpos', 'feedgap'], ['E', 'TSPL', 'tspl', 'lines']];
+    log('کالیبراسیون: ۲ لیبل برای هر روش (A تا E)');
+    for (const [L, d, lang, af] of ms) for (let n = 1; n <= 2; n++) {
+      $('after').value = af; big('کالیبراسیون ' + L + n + ' از ۱۰…', 'run');
+      const b = frame(L + n + ' ' + d);
+      await printUnit(jobBytes(b.bits, b.h, lang), undefined, null); await sleep(1200);
+    }
+    $('after').value = saved.after; $('lang').value = saved.lang;
+    big('کالیبراسیون چاپ شد؛ نتیجه را بررسی کن', 'ok');
+    const ans = (prompt('کدام حرف (A تا E) هر دو لیبلش دقیقاً داخل یک لیبل، بدون جابه‌جایی و بدون پرش چاپ شد؟ (اگر هیچ‌کدام درست نبود، خالی بگذار)') || '').trim().toUpperCase();
+    const pick = ms.find(m => m[0] === ans);
+    if (pick) {
+      $('lang').value = pick[2]; $('after').value = pick[3]; LS.set('pt260:lang', pick[2]); LS.set('pt260:after', pick[3]);
+      markOk(); big('✓ تنظیم ذخیره شد: ' + pick[1] + ' (' + pick[2] + ')', 'ok'); log('کالیبراسیون: روش ' + pick[0] + ' انتخاب شد');
+    } else { log('کالیبراسیون: هیچ روشی تأیید نشد — عکس لیبل‌ها را برای تحلیل بفرست'); big('هیچ روشی تأیید نشد', 'warn'); }
+  } catch(e){ $('after').value = saved.after; $('lang').value = saved.lang; log('کالیبراسیون: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
 };
 $('bStart').onclick = startJob;
 $('bPause').onclick = () => {
