@@ -33,7 +33,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260</h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۲</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -61,6 +61,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     </label>
   </div>
   <label class="chk"><input type="checkbox" id="rot" data-save> چرخاندن ۹۰° (صفحه‌ی افقی)</label>
+  <label class="chk"><input type="checkbox" id="rot180" data-save> چرخاندن ۱۸۰° (اگر برعکس چاپ شد)</label>
 </div>
 
 <div class="card">
@@ -137,7 +138,7 @@ document.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => {
 });
 $('thv').textContent = $('thr').value;
 $('thr').addEventListener('input', () => { $('thv').textContent = $('thr').value; sched(); });
-['mode','rot','from'].forEach(id => $(id).addEventListener('change', sched));
+['mode','rot','rot180','from'].forEach(id => $(id).addEventListener('change', sched));
 
 if (!navigator.bluetooth) $('nobt').hidden = false;
 pdfInit();
@@ -201,7 +202,12 @@ async function buildPage(i){
     const { im, u } = await loadImg(src.files[i]);
     try { cv = fit(im, im.naturalWidth, im.naturalHeight, $('rot').checked); } finally { URL.revokeObjectURL(u); }
   }
+  if ($('rot180').checked) cv = rotate180(cv);
   return mono(cv, $('mode').value, +$('thr').value);
+}
+function rotate180(cv){
+  const o = document.createElement('canvas'); o.width = cv.width; o.height = cv.height;
+  const x = o.getContext('2d'); x.translate(cv.width, cv.height); x.rotate(Math.PI); x.drawImage(cv, 0, 0); return o;
 }
 
 /* ---------- ESC/POS ---------- */
@@ -213,9 +219,9 @@ function tail(){
   const n = Math.max(0, Math.min(255, +$('lines').value || 0));
   return n ? [0x1b, 0x64, n] : [];
 }
-function escpos(bits, h){
-  const parts = [new Uint8Array([0x1b, 0x40])];           // ESC @
-  const BAND = 128;
+function escpos(bits, h, noInit){
+  const parts = noInit ? [] : [new Uint8Array([0x1b, 0x40])];           // ESC @
+  const BAND = 255;
   for (let y = 0; y < h; y += BAND) {
     const n = Math.min(BAND, h - y);
     parts.push(new Uint8Array([0x1d, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, n & 255, n >> 8])); // GS v 0
@@ -236,7 +242,7 @@ const CANDS = [
   { n: 'CH5', label: '4953/8841', s: '49535343-fe7d-4ae5-8fa9-9fafd205e455', c: '49535343-8841-43f4-a8d4-ecbe34729bb3' }
 ];
 const OPT = CANDS.map(x => x.s);
-let device = null, server = null, chr = null, curIdx = -1;
+let device = null, server = null, chr = null, curIdx = -1, curChunk = 0;
 let chIdx = Math.min(CANDS.length - 1, Math.max(0, parseInt(LS.get('pt260:ch') || '0', 10) || 0));
 const job = { running: false, paused: false, stop: false };
 
@@ -297,7 +303,7 @@ async function gate(){
   while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
 }
 async function sendAll(data, csO, dlO, st){
-  const cs = csO || Math.max(10, +$('chunk').value || 100), dl = (dlO !== undefined) ? dlO : Math.max(0, +$('delay').value || 0);
+  const cs = csO || curChunk || Math.max(10, +$('chunk').value || 100), dl = (dlO !== undefined) ? dlO : Math.max(0, +$('delay').value || 0);
   st = st || { off: 0 };
   while (st.off < data.length) {
     await gate();
@@ -314,6 +320,8 @@ async function printWithRetry(data, idx){
     catch(e){
       if (e === STOP) throw e;
       last = e; log('خطای ارسال (تلاش ' + a + ') در ' + st.off + '/' + data.length + ': ' + errText(e));
+      const base = curChunk || Math.max(10, +$('chunk').value || 100);
+      if (a >= 2 && base > 20) { curChunk = Math.max(20, Math.floor(base / 2)); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
       chr = null; curIdx = -1; await sleep(800);
     }
   }
@@ -380,7 +388,7 @@ async function startJob(){
   const from = Math.max(1, +$('from').value || 1), to = Math.min(src.count, +$('to').value || src.count);
   const copies = Math.max(1, +$('copies').value || 1);
   if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
-  job.running = true; job.paused = false; job.stop = false; ui(true);
+  job.running = true; job.paused = false; job.stop = false; curChunk = 0; ui(true);
   const total = (to - from + 1) * copies; let done = 0, wl = null;
   $('prog').max = total; $('prog').value = 0;
   try {
@@ -448,7 +456,11 @@ $('bAllCh').onclick = async () => {
     for (let i = 0; i < CANDS.length; i++) {
       const k = CANDS[i], label = k.n + ' ' + k.label;
       setStatus('تست ' + label + ' …', true); log('تست متن: ' + label);
-      const data = concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), new Uint8Array([0x1b, 0x64, 3])]);
+      const lc = document.createElement('canvas'); lc.width = W; lc.height = 64;
+      const lx = lc.getContext('2d'); lx.fillStyle = '#fff'; lx.fillRect(0, 0, W, 64); lx.fillStyle = '#000';
+      lx.font = 'bold 34px sans-serif'; lx.textAlign = 'center'; lx.textBaseline = 'middle'; lx.fillText(label, W / 2, 34);
+      const lm = mono(lc, 'th', 128);
+      const data = concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), escpos(lm.bits, lm.h, true)]);
       try { await printWithRetry(data, i); log('ارسال شد: ' + label); }
       catch(e){ log(k.n + ' خطا: ' + errText(e)); }
       await sleep(1200);
