@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۶</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۸</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -50,7 +50,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
+  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
 <div class="card">
@@ -58,6 +58,15 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <input type="file" id="file" accept="application/pdf,image/*" multiple>
   <div class="row"><span class="pill" id="info">فایلی انتخاب نشده</span></div>
   <canvas id="pv" width="384" height="10"></canvas>
+  <div class="row">
+    <label>اندازه‌ی ارسال (سرعت)
+      <select id="q" data-save>
+        <option value="1">کامل — کیفیت بالا</option>
+        <option value="2">عرض نصف — ۲ برابر سریع‌تر</option>
+        <option value="4">عرض و ارتفاع نصف — ۴ برابر سریع‌تر</option>
+      </select>
+    </label>
+  </div>
   <div class="row">
     <label>حالت
       <select id="mode" data-save>
@@ -103,12 +112,13 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </div>
 
 <div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
-  <div class="row"><button data-prof="180,0,auto">یک‌جا (سریع)</button><button data-prof="100,8,resp">متعادل</button><button data-prof="20,20,resp">ایمن (کند)</button></div>
+  <div class="row"><button data-prof="180,0,win,4">پنجره‌ای (سریع، پیشنهادی)</button><button data-prof="180,0,auto,0">بی‌وقفه</button><button data-prof="180,0,resp,1">با تأیید هر بسته</button></div>
   <div class="row">
     <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="180" min="10" max="512" inputmode="numeric" data-save></label>
     <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>بسته‌ها بین هر تأیید<input type="number" id="win" value="4" min="1" max="64" inputmode="numeric" data-save></label>
     <label>نوع نوشتن
-      <select id="wmode" data-save><option value="auto">بدون تأیید (یک‌جا و سریع)</option><option value="resp">با تأیید (کندتر، پایدارتر)</option></select>
+      <select id="wmode" data-save><option value="win">پنجره‌ای: چند بسته بدون تأیید، بعد یک تأیید (پیش‌فرض)</option><option value="auto">بدون هیچ تأیید (خطر از دست رفتن بسته)</option><option value="resp">با تأیید هر بسته (کند)</option></select>
     </label>
   </div>
   <div class="row">
@@ -116,11 +126,12 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     <label>ارتفاع لیبل (mm، ۰ = خودکار)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
     <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="2" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
+  <label class="chk"><input type="checkbox" id="ntf" data-save checked> فعال‌سازی اعلان‌های پرینتر (تشخیص)</label>
   <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
     <div class="row"><label>بعد از قطع شدن، ادامه از
       <select id="resume" data-save>
-        <option value="byte">همان نقطه — بدون تکرار (پیش‌فرض)</option>
-        <option value="page">ابتدای همان برگ (ممکن است بالای برگ تکراری شود)</option>
+        <option value="page">ابتدای همان برگ — سریع (پیش‌فرض)</option>
+        <option value="byte">همان نقطه — بدون تکرار ولی بسیار کند</option>
       </select>
     </label></div>
   <p style="font-size:13px;color:var(--mut)">«یک‌جا» کل صفحه را پشت‌سرهم و بدون مکث می‌فرستد تا قبل از قطع شدن اتصال تمام شود. اگر چاپ ناقص یا خراب شد «متعادل» و بعد «ایمن» را بزن.</p>
@@ -149,6 +160,7 @@ function setP(t){ big(t); }
 function short(u){ u = String(u).toUpperCase(); return /^0000[0-9A-F]{4}-0000-1000-8000-00805F9B34FB$/.test(u) ? u.slice(4,8) : (u.length > 8 ? u.slice(0,8) : u); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
+if (LS.get('pt260:ver') !== '18') { ['chunk','delay','wmode','resume','q','ntf','win'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '18'); }
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
 document.querySelectorAll('[data-save]').forEach(el => {
   const k = 'pt260:' + el.id, v = LS.get(k);
@@ -156,9 +168,10 @@ document.querySelectorAll('[data-save]').forEach(el => {
   el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
 });
 document.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => {
-  const [c, d, w] = b.dataset.prof.split(',');
+  const [c, d, w, n] = b.dataset.prof.split(',');
   $('chunk').value = c; $('delay').value = d; LS.set('pt260:chunk', c); LS.set('pt260:delay', d);
   if (w) { $('wmode').value = w; LS.set('pt260:wmode', w); }
+  if (n && +n > 0) { $('win').value = n; LS.set('pt260:win', n); }
   log('پروفایل ارسال: بسته ' + c + ' بایت، تأخیر ' + d + ' ms، ' + (w || 'بدون تغییر'));
 });
 $('thv').textContent = $('thr').value;
@@ -256,18 +269,28 @@ function tail(){
   const n = Math.max(0, Math.min(255, +$('lines').value || 0));
   return n ? [0x1b, 0x64, n] : [];
 }
-function escpos(bits, h, noInit){
+function shrink(bits, h, sx, sy){
+  const bw = BYTES / sx, nh = Math.ceil(h / sy), out = new Uint8Array(bw * nh);
+  for (let y = 0; y < h; y++) {
+    const oy = (y / sy) | 0, row = y * BYTES;
+    for (let x = 0; x < W; x++) if ((bits[row + (x >> 3)] >> (7 - (x & 7))) & 1) { const ox = (x / sx) | 0; out[oy * bw + (ox >> 3)] |= 0x80 >> (ox & 7); }
+  }
+  return { bits: out, h: nh, bw };
+}
+function escpos(bits, h, noInit, qO){
+  const q = String(qO || $('q').value || '1');
+  let m = 0, bw = BYTES;
+  if (q !== '1') { const s = shrink(bits, h, 2, q === '4' ? 2 : 1); bits = s.bits; h = s.h; bw = s.bw; m = q === '4' ? 3 : 1; }
   const parts = noInit ? [] : [new Uint8Array([0x1b, 0x40])];           // ESC @
   const BAND = 64;
   for (let y = 0; y < h; y += BAND) {
     const n = Math.min(BAND, h - y);
-    parts.push(new Uint8Array([0x1d, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, n & 255, n >> 8])); // GS v 0
-    parts.push(bits.subarray(y * BYTES, (y + n) * BYTES));
+    parts.push(new Uint8Array([0x1d, 0x76, 0x30, m, bw & 255, bw >> 8, n & 255, n >> 8])); // GS v 0
+    parts.push(bits.subarray(y * bw, (y + n) * bw));
   }
   parts.push(new Uint8Array(tail()));
   return concat(parts);
 }
-
 /* ---------- زبان‌های پرینتر: TSPL و CPCL ---------- */
 const HEXT = Array.from({ length: 256 }, (_, i) => (i < 16 ? '0' : '') + i.toString(16).toUpperCase());
 function tsplJob(bits, h){
@@ -323,13 +346,31 @@ $('chSel').addEventListener('change', e => {
   chIdx = +e.target.value; LS.set('pt260:ch', String(chIdx)); chr = null; curIdx = -1; log('کانال: ' + CANDS[chIdx].n + ' ' + CANDS[chIdx].label);
 });
 
+let tConn = 0, ntfN = 0;
 async function openChar(idx){
   const k = CANDS[idx];
   server = await device.gatt.connect();
   const svc = await server.getPrimaryService(k.s);
   chr = await svc.getCharacteristic(k.c);
-  curIdx = idx;
+  curIdx = idx; tConn = Date.now();
   setStatus('متصل: ' + (device.name || 'پرینتر') + ' (' + k.n + ')', true);
+  if ($('ntf').checked) {
+    try {
+      const cs = await withTimeout(svc.getCharacteristics(), 4000);
+      for (const c of cs) {
+        const pr = c.properties;
+        if (!(pr.notify || pr.indicate)) continue;
+        try {
+          await withTimeout(c.startNotifications(), 4000);
+          c.addEventListener('characteristicvaluechanged', ev => {
+            if (ntfN++ >= 60) return;
+            const v = new Uint8Array(ev.target.value.buffer, ev.target.value.byteOffset, ev.target.value.byteLength);
+            log('اعلان ' + short(c.uuid) + ': ' + Array.from(v).map(b => b.toString(16).padStart(2, '0')).join(' '));
+          });
+        } catch(e){ log('اعلان ' + short(c.uuid) + ' ناموفق: ' + errText(e)); }
+      }
+    } catch(e){ log('فهرست مشخصه‌ها: ' + errText(e)); }
+  }
 }
 function attach(d){
   if (d._pt) return; d._pt = 1;
@@ -337,7 +378,7 @@ function attach(d){
     chr = null; curIdx = -1;
     if (job.running) { PS.disc++; setStatus('قطع شد — اتصال خودکار', false); if (!job.paused) big('⚠ اتصال قطع شد — در حال اتصال مجدد…' + whereTxt(), 'warn'); statsLine(); }
     else setStatus('قطع شد (هنگام چاپ خودکار وصل می‌شود)', false);
-    log('اتصال قطع شد' + (job.running ? ' (شماره ' + PS.disc + ')' : ''));
+    log('اتصال قطع شد — عمر اتصال ' + ((Date.now() - tConn) / 1000).toFixed(1) + ' ثانیه' + (job.running ? ' (شماره ' + PS.disc + ')' : ''));
   });
 }
 async function connect(mode, force){
@@ -397,12 +438,17 @@ async function ensureConnected(i, ctx){
   $('bRe').hidden = true;
   if (ctx) { PS.rec++; log('دوباره وصل شد بعد از ' + n + ' تلاش'); }
 }
-async function write(chunk){
+let winO = null;
+async function write(chunk, i){
   if (!chr) throw new Error('کانال قطع شد');
-  const p = chr.properties;
+  const p = chr.properties, canNR = p.writeWithoutResponse && chr.writeValueWithoutResponse, canR = p.write && (chr.writeValueWithResponse || chr.writeValue);
+  let resp;
+  if ($('resume').value === 'byte' || $('wmode').value === 'resp') resp = true;
+  else if ($('wmode').value === 'auto') resp = false;
+  else { const w = winO != null ? winO : Math.max(1, +$('win').value || 4); resp = (i % w) === (w - 1); }
+  if (!canNR) resp = true; else if (!canR) resp = false;
   let r;
-  const exact = $('resume').value === 'byte' && (chr.writeValueWithResponse || chr.writeValue);
-  if (!exact && $('wmode').value === 'auto' && p.writeWithoutResponse && chr.writeValueWithoutResponse) r = chr.writeValueWithoutResponse(chunk);
+  if (!resp) r = chr.writeValueWithoutResponse(chunk);
   else if (chr.writeValueWithResponse) r = chr.writeValueWithResponse(chunk);
   else r = chr.writeValue(chunk);
   return withTimeout(r, 8000);
@@ -417,7 +463,7 @@ async function sendAll(data, st, meta){
     await gate();
     const cs = curChunk || Math.max(10, +$('chunk').value || 100), dl = curDelay();
     const end = Math.min(data.length, st.off + cs);
-    await write(data.subarray(st.off, end));
+    await write(data.slice(st.off, end), st.n = (st.n || 0) + 1);
     PS.bytes += end - st.off; st.off = end;
     if (meta && Date.now() > tick) {
       tick = Date.now() + 300;
@@ -435,7 +481,7 @@ async function printUnit(data, idx, meta){
       await ensureConnected(idx, meta);
       if (att > 1) {
         if (meta) { big('✓ دوباره وصل شد — ادامه‌ی چاپ از ' + meta.label + ($('resume').value === 'byte' ? ' (همان نقطه، بدون تکرار)' : ' (ابتدای برگ)'), 'ok'); meta.hold = true; }
-        if (lang !== 'escpos' && st.off === 0) await write(new Uint8Array([13, 10]));
+        if (lang !== 'escpos' && st.off === 0) await write(new Uint8Array([13, 10]), 0);
       }
       await sendAll(data, st, meta);
       PS.cleanPages = fails ? 0 : PS.cleanPages + 1;
@@ -447,10 +493,12 @@ async function printUnit(data, idx, meta){
       if (fails >= (meta ? 40 : 6)) throw e;
       log('خطای ارسال (تلاش ' + att + ') در ' + st.off + '/' + data.length + ': ' + errText(e));
       if ($('resume').value !== 'byte') st.off = 0;
-      PS.delay = Math.min(30, Math.max(4, (PS.delay == null ? userDelay() : PS.delay) * 2 || 4));
-      const base = curChunk || Math.max(10, +$('chunk').value || 100);
-      if (fails >= 3 && base > 20) { curChunk = Math.max(20, Math.floor(base / 2)); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
-      log('تأخیر بین بسته‌ها: ' + PS.delay + ' ms');
+      if (st.off > (st.max || 0)) { st.max = st.off; st.stall = 0; } else st.stall = (st.stall || 0) + 1;
+      if (st.stall >= 3) {
+        const base = curChunk || Math.max(10, +$('chunk').value || 100);
+        if (base > 20) { curChunk = Math.max(20, Math.floor(base / 2)); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
+        st.stall = 0;
+      }
       chr = null; curIdx = -1; try { device.gatt.disconnect(); } catch(_){}
       await sleep(600);
     }
@@ -622,6 +670,36 @@ $('bLang').onclick = async () => {
     setStatus('تست زبان‌ها تمام شد', true);
     log('روی کاغذ ببین کدام زبان (ESCPOS / TSPL / CPCL) چاپ شد و همان را در «زبان پرینتر» انتخاب کن');
   } catch(e){ log('تست زبان‌ها: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
+};
+$('bBench').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!isUp()) await connect('filter');
+    const mk = txt => {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = 200;
+      const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, 200); x.fillStyle = '#000';
+      x.lineWidth = 4; x.strokeStyle = '#000'; x.strokeRect(2, 2, W - 4, 196);
+      for (let i = 0; i < 12; i++) x.fillRect(12 + i * 30, 70, 14, 118);
+      x.font = 'bold 44px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, W / 2, 38);
+      return mono(cv, 'th', 128);
+    };
+    const run = async (txt, cs, q) => {
+      const b = mk(txt); curChunk = cs; const data = escpos(b.bits, b.h, false, q);
+      const t = performance.now();
+      try { await printUnit(data, undefined, null); const ms = performance.now() - t; log('تست ' + txt + ': ' + data.length + ' بایت در ' + Math.round(ms) + ' ms = ' + (data.length / 1024 / (ms / 1000)).toFixed(1) + ' KB/s'); }
+      catch(e){ log('تست ' + txt + ' خطا: ' + errText(e)); }
+      await sleep(2500);
+    };
+    log('تست سرعت: چند برچسب چاپ می‌شود؛ سالم‌ها را یادداشت کن');
+    const saveW = $('wmode').value;
+    const cfg = [['A', 180, 1, 'resp'], ['B', 180, 4, 'win'], ['C', 180, 8, 'win'], ['D', 180, 16, 'win'], ['E', 180, 0, 'auto'], ['F', 100, 8, 'win'], ['G', 240, 4, 'win']];
+    for (const [nm, cs, w, wm] of cfg) { $('wmode').value = wm; winO = w || null; await run(nm + ' ' + cs + '/' + (w || 'burst'), cs, '1'); }
+    $('wmode').value = 'win'; winO = null;
+    await run('X2', 180, '2'); await run('X4', 180, '4');
+    $('wmode').value = saveW; winO = null; curChunk = 0;
+    log('پایان تست. هر برچسب که کامل و بدون اعوجاج چاپ شد یعنی همان ترکیب (اندازه/پنجره) سالم است. سریع‌ترین ترکیب سالم را از لاگ انتخاب کن؛ X2 و X4 هم اگر سالم بودند حالت کم‌حجم پشتیبانی می‌شود');
+    setStatus('تست سرعت تمام شد', true);
+  } catch(e){ log('تست سرعت: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bStart').onclick = startJob;
 $('bPause').onclick = () => {
