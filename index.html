@@ -91,12 +91,12 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </div>
 
 <div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
-  <div class="row"><button data-prof="20,15">ایمن</button><button data-prof="60,12">متعادل</button><button data-prof="180,6">سریع</button></div>
+  <div class="row"><button data-prof="20,20">ایمن</button><button data-prof="100,8">متعادل</button><button data-prof="200,5">سریع</button></div>
   <div class="row">
-    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="20" min="10" max="512" inputmode="numeric" data-save></label>
-    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="15" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="100" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="8" min="0" max="200" inputmode="numeric" data-save></label>
     <label>نوع نوشتن
-      <select id="wmode" data-save><option value="auto">خودکار</option><option value="resp">با تأیید</option></select>
+      <select id="wmode" data-save><option value="resp">با تأیید (پایدارتر)</option><option value="auto">بدون تأیید (سریع‌تر)</option></select>
     </label>
   </div>
   <p style="font-size:13px;color:var(--mut)">اگر چاپ ناقص یا خراب شد «ایمن» را بزن. اگر خیلی کند بود «سریع».</p>
@@ -114,8 +114,6 @@ const W = 384, BYTES = W / 8;               // ۵۸ میلی‌متر، ۲۰۳dp
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const STOP = new Error('stop');
-const S18F0 = '000018f0-0000-1000-8000-00805f9b34fb';
-const OPT = [S18F0, 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
 
 const LS = {
   get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
@@ -228,78 +226,69 @@ function escpos(bits, h){
 }
 
 /* ---------- بلوتوث ---------- */
-let device = null, server = null, chr = null, chars = [], selKey = null;
+// کانال‌های قابل‌نوشتن PT-260 (طبق گزارش nRF/Bluefy). بدون جست‌وجوی کامل مستقیم باز می‌شوند چون اتصال بعد از چند ثانیه قطع می‌شود.
+const U = h => '0000' + h + '-0000-1000-8000-00805f9b34fb';
+const CANDS = [
+  { n: 'CH1', label: '18F0/2AF1', s: U('18f0'), c: U('2af1') },
+  { n: 'CH2', label: 'FF00/FF02', s: U('ff00'), c: U('ff02') },
+  { n: 'CH3', label: 'FEE7/FEC7', s: U('fee7'), c: U('fec7') },
+  { n: 'CH4', label: 'E781/BEF8', s: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', c: 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f' },
+  { n: 'CH5', label: '4953/8841', s: '49535343-fe7d-4ae5-8fa9-9fafd205e455', c: '49535343-8841-43f4-a8d4-ecbe34729bb3' }
+];
+const OPT = CANDS.map(x => x.s);
+let device = null, server = null, chr = null, curIdx = -1;
+let chIdx = Math.min(CANDS.length - 1, Math.max(0, parseInt(LS.get('pt260:ch') || '0', 10) || 0));
 const job = { running: false, paused: false, stop: false };
 
-function score(x){
-  let s = 0;
-  if (/ff00|18f0|49535343|ffe0|ffb0|fff0|ae30|e7810a71/.test(x.s.toLowerCase())) s += 10;
-  if (x.c.properties.writeWithoutResponse) s += 3;
-  if (x.c.properties.write) s += 1;
-  return s;
-}
-async function openGatt(){
+(function(){
+  const sel = $('chSel');
+  CANDS.forEach((x, i) => { const o = document.createElement('option'); o.value = i; o.textContent = x.n + ': ' + x.label; sel.appendChild(o); });
+  sel.value = chIdx; $('charRow').hidden = false;
+})();
+$('chSel').addEventListener('change', e => {
+  chIdx = +e.target.value; LS.set('pt260:ch', String(chIdx)); chr = null; curIdx = -1; log('کانال: ' + CANDS[chIdx].n + ' ' + CANDS[chIdx].label);
+});
+
+async function openChar(idx){
+  const k = CANDS[idx];
   setStatus('در حال اتصال…');
   server = await device.gatt.connect();
-  let services = [];
-  try { services = await server.getPrimaryServices(); } catch(e){ log('getPrimaryServices: ' + e.message); }
-  chars = [];
-  for (const s of services) {
-    let cs = [];
-    try { cs = await s.getCharacteristics(); } catch(e){ log('chars ' + s.uuid + ': ' + e.message); }
-    for (const c of cs) {
-      const p = c.properties;
-      log(s.uuid + ' / ' + c.uuid + ' [' + ['write','writeWithoutResponse','notify','read'].filter(k => p[k]).join(',') + ']');
-      if (p.write || p.writeWithoutResponse) chars.push({ s: s.uuid, c });
-    }
-  }
-  if (!chars.length) { setStatus('کانال نوشتن پیدا نشد', false); throw new Error('کانال قابل‌نوشتن پیدا نشد؛ «گزارش» را برای من بفرست'); }
-  chars.sort((a, b) => score(b) - score(a));
-  let idx = 0;
-  if (!selKey) selKey = LS.get('pt260:chan');
-  if (selKey) { const k = chars.findIndex(x => x.s + '/' + x.c.uuid === selKey); if (k >= 0) idx = k; }
-  const sel = $('chSel'); sel.innerHTML = '';
-  chars.forEach((x, i) => {
-    const o = document.createElement('option'); o.value = i;
-    o.textContent = 'CH' + (i + 1) + ': ' + short(x.s) + ' / ' + short(x.c.uuid); sel.appendChild(o);
-  });
-  sel.value = idx; $('charRow').hidden = false;
-  chr = chars[idx].c; selKey = chars[idx].s + '/' + chr.uuid;
-  setStatus('متصل: ' + (device.name || 'پرینتر'), true);
-  log('کانال انتخاب‌شده: ' + selKey);
+  const svc = await server.getPrimaryService(k.s);
+  chr = await svc.getCharacteristic(k.c);
+  curIdx = idx;
+  setStatus('متصل: ' + (device.name || 'پرینتر') + ' (' + k.n + ')', true);
+  log('کانال آماده: ' + k.n + ' ' + k.label);
 }
-$('chSel').addEventListener('change', e => {
-  const x = chars[+e.target.value]; chr = x.c; selKey = x.s + '/' + x.c.uuid; LS.set('pt260:chan', selKey); log('کانال: ' + selKey);
-});
 async function connect(mode){
   if (!navigator.bluetooth) { $('nobt').hidden = false; throw new Error('Web Bluetooth در این مرورگر نیست'); }
-  if (device) { try { await openGatt(); return; } catch(e){ log('اتصال مجدد نشد: ' + e.message); } }
+  if (device) { try { await openChar(chIdx); return; } catch(e){ log('اتصال مجدد نشد: ' + errText(e)); } }
   try {
     const opts = mode === 'all'
       ? { acceptAllDevices: true, optionalServices: OPT }
-      : { filters: [{ services: [S18F0] }, { namePrefix: 'PT-' }], optionalServices: OPT };
+      : { filters: [{ services: [CANDS[0].s] }, { namePrefix: 'PT-' }], optionalServices: OPT };
     log('requestDevice: ' + (mode === 'all' ? 'همه دستگاه‌ها' : 'فیلتر PT / 18F0'));
     device = await navigator.bluetooth.requestDevice(opts);
   } catch(e){ log('requestDevice خطا: ' + errText(e)); setStatus('دستگاه انتخاب نشد: ' + errText(e), false); throw e; }
-  device.addEventListener('gattserverdisconnected', () => { chr = null; setStatus('قطع شد', false); log('اتصال قطع شد'); });
-  selKey = null;
-  await openGatt();
+  device.addEventListener('gattserverdisconnected', () => { chr = null; curIdx = -1; setStatus('قطع شد (هنگام چاپ خودکار وصل می‌شود)', false); log('اتصال قطع شد'); });
+  await openChar(chIdx);
 }
-const isUp = () => device && device.gatt.connected && chr;
-async function ensureConnected(){
-  if (isUp()) return;
+const isUp = i => device && device.gatt.connected && chr && curIdx === (i === undefined ? chIdx : i);
+async function ensureConnected(i){
+  const idx = (i === undefined) ? chIdx : i;
+  if (isUp(idx)) return;
   if (!device) throw new Error('پرینتر متصل نیست');
-  for (let i = 1; i <= 6; i++) {
+  let last = null;
+  for (let t = 1; t <= 6; t++) {
     if (job.stop) throw STOP;
-    try { setStatus('اتصال مجدد (' + i + ')…'); await openGatt(); return; }
-    catch(e){ log('اتصال مجدد ' + i + ': ' + e.message); await sleep(1500); }
+    try { await openChar(idx); return; }
+    catch(e){ last = e; log('اتصال مجدد ' + t + ': ' + errText(e)); await sleep(1000); }
   }
-  throw new Error('اتصال مجدد ناموفق بود');
+  throw last || new Error('اتصال مجدد ناموفق بود');
 }
 async function write(chunk){
   if (!chr) throw new Error('کانال قطع شد');
   const p = chr.properties;
-  if ($('wmode').value !== 'resp' && p.writeWithoutResponse && chr.writeValueWithoutResponse) return chr.writeValueWithoutResponse(chunk);
+  if ($('wmode').value === 'auto' && p.writeWithoutResponse && chr.writeValueWithoutResponse) return chr.writeValueWithoutResponse(chunk);
   if (chr.writeValueWithResponse) return chr.writeValueWithResponse(chunk);
   return chr.writeValue(chunk);
 }
@@ -307,22 +296,25 @@ async function gate(){
   if (job.stop) throw STOP;
   while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
 }
-async function sendAll(data, csO, dlO){
-  const cs = csO || Math.max(10, +$('chunk').value || 20), dl = (dlO !== undefined) ? dlO : Math.max(0, +$('delay').value || 0);
-  for (let i = 0; i < data.length; i += cs) {
+async function sendAll(data, csO, dlO, st){
+  const cs = csO || Math.max(10, +$('chunk').value || 100), dl = (dlO !== undefined) ? dlO : Math.max(0, +$('delay').value || 0);
+  st = st || { off: 0 };
+  while (st.off < data.length) {
     await gate();
-    await write(data.subarray(i, i + cs));
+    const end = Math.min(data.length, st.off + cs);
+    await write(data.subarray(st.off, end));
+    st.off = end;
     if (dl) await sleep(dl);
   }
 }
-async function printWithRetry(data){
-  let last = null;
-  for (let a = 1; a <= 4; a++) {
-    try { await ensureConnected(); await sendAll(data); return; }
+async function printWithRetry(data, idx){
+  const st = { off: 0 }; let last = null;
+  for (let a = 1; a <= 6; a++) {
+    try { await ensureConnected(idx); await sendAll(data, undefined, undefined, st); return; }
     catch(e){
       if (e === STOP) throw e;
-      last = e; log('خطای ارسال (تلاش ' + a + '): ' + e.message);
-      chr = null; await sleep(1200);
+      last = e; log('خطای ارسال (تلاش ' + a + ') در ' + st.off + '/' + data.length + ': ' + errText(e));
+      chr = null; curIdx = -1; await sleep(800);
     }
   }
   throw last || new Error('ارسال ناموفق');
@@ -436,33 +428,33 @@ function testCanvas(){
 $('bConn').onclick = async () => { try { await connect('filter'); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); } };
 $('bNew').onclick = async () => {
   try { if (device && device.gatt.connected) device.gatt.disconnect(); } catch(e){}
-  device = null; chr = null; selKey = null;
+  device = null; chr = null; curIdx = -1;
   try { await connect('all'); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bTest').onclick = async () => {
   try {
     job.stop = false; job.paused = false;
-    if (!isUp()) await connect();
+    if (!device) await connect('filter');
     const { bits, h } = mono(testCanvas(), 'th', 128);
     await printWithRetry(escpos(bits, h));
-    log('چاپ تست ارسال شد');
-  } catch(e){ log('چاپ تست: ' + e.message); setStatus('خطا: ' + e.message, false); }
+    log('چاپ تست تصویر ارسال شد');
+  } catch(e){ log('چاپ تست: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bAllCh').onclick = async () => {
   try {
     job.stop = false; job.paused = false;
-    if (!device || !device.gatt.connected || !chars.length) await connect('filter');
-    const enc = new TextEncoder(), keep = +$('chSel').value || 0;
-    for (let i = 0; i < chars.length; i++) {
-      const x = chars[i]; chr = x.c;
-      const label = 'CH' + (i + 1) + ' ' + short(x.s) + '/' + short(x.c.uuid);
+    if (!device) await connect('filter');
+    const enc = new TextEncoder();
+    for (let i = 0; i < CANDS.length; i++) {
+      const k = CANDS[i], label = k.n + ' ' + k.label;
       setStatus('تست ' + label + ' …', true); log('تست متن: ' + label);
-      try { await sendAll(concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), new Uint8Array([0x1b, 0x64, 3])]), 20, 15); }
-      catch(e){ log('کانال ' + (i + 1) + ' خطا: ' + errText(e)); }
-      await sleep(1500);
+      const data = concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), new Uint8Array([0x1b, 0x64, 3])]);
+      try { await printWithRetry(data, i); log('ارسال شد: ' + label); }
+      catch(e){ log(k.n + ' خطا: ' + errText(e)); }
+      await sleep(1200);
     }
-    chr = chars[keep].c; setStatus('متصل: ' + (device.name || 'پرینتر'), true);
-    log('تمام شد. روی کاغذ ببین کدام CH چاپ شده و همان را در «کانال ارسال» انتخاب کن');
+    chr = null; curIdx = -1; setStatus('تست کانال‌ها تمام شد', true);
+    log('روی کاغذ ببین کدام CH چاپ شده و همان را در «کانال ارسال» انتخاب کن');
   } catch(e){ log('تست کانال‌ها: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bStart').onclick = startJob;
