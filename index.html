@@ -41,7 +41,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button><button id="bNew">نمایش همه‌ی دستگاه‌ها</button></div>
   <div class="row"><span class="pill" id="st">متصل نیست</span></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bTest">چاپ تست</button></div>
+  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button></div>
 </div>
 
 <div class="card">
@@ -91,10 +91,10 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </div>
 
 <div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
-  <div class="row"><button data-prof="20,20">ایمن</button><button data-prof="100,10">متعادل</button><button data-prof="180,6">سریع</button></div>
+  <div class="row"><button data-prof="20,15">ایمن</button><button data-prof="60,12">متعادل</button><button data-prof="180,6">سریع</button></div>
   <div class="row">
-    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="100" min="10" max="512" inputmode="numeric" data-save></label>
-    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="10" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="20" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="15" min="0" max="200" inputmode="numeric" data-save></label>
     <label>نوع نوشتن
       <select id="wmode" data-save><option value="auto">خودکار</option><option value="resp">با تأیید</option></select>
     </label>
@@ -124,6 +124,7 @@ const LS = {
 function log(m){ const t = new Date().toLocaleTimeString('en-GB'); const L = $('log'); L.value += '['+t+'] '+m+'\n'; L.scrollTop = 1e9; }
 function setStatus(t, ok){ const s = $('st'); s.textContent = t; s.className = 'pill' + (ok===true?' ok':ok===false?' bad':''); }
 function setP(t){ $('ptxt').textContent = t; }
+function short(u){ u = String(u).toUpperCase(); return /^0000[0-9A-F]{4}-0000-1000-8000-00805F9B34FB$/.test(u) ? u.slice(4,8) : (u.length > 8 ? u.slice(0,8) : u); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
@@ -232,7 +233,7 @@ const job = { running: false, paused: false, stop: false };
 
 function score(x){
   let s = 0;
-  if (/ff00|18f0|49535343|ffe0|ffb0|fff0|ae30|e7810a71/.test(x.s)) s += 10;
+  if (/ff00|18f0|49535343|ffe0|ffb0|fff0|ae30|e7810a71/.test(x.s.toLowerCase())) s += 10;
   if (x.c.properties.writeWithoutResponse) s += 3;
   if (x.c.properties.write) s += 1;
   return s;
@@ -255,19 +256,20 @@ async function openGatt(){
   if (!chars.length) { setStatus('کانال نوشتن پیدا نشد', false); throw new Error('کانال قابل‌نوشتن پیدا نشد؛ «گزارش» را برای من بفرست'); }
   chars.sort((a, b) => score(b) - score(a));
   let idx = 0;
+  if (!selKey) selKey = LS.get('pt260:chan');
   if (selKey) { const k = chars.findIndex(x => x.s + '/' + x.c.uuid === selKey); if (k >= 0) idx = k; }
   const sel = $('chSel'); sel.innerHTML = '';
   chars.forEach((x, i) => {
     const o = document.createElement('option'); o.value = i;
-    o.textContent = x.s.slice(0, 8) + ' / ' + x.c.uuid.slice(0, 8); sel.appendChild(o);
+    o.textContent = 'CH' + (i + 1) + ': ' + short(x.s) + ' / ' + short(x.c.uuid); sel.appendChild(o);
   });
-  sel.value = idx; $('charRow').hidden = chars.length < 2;
+  sel.value = idx; $('charRow').hidden = false;
   chr = chars[idx].c; selKey = chars[idx].s + '/' + chr.uuid;
   setStatus('متصل: ' + (device.name || 'پرینتر'), true);
   log('کانال انتخاب‌شده: ' + selKey);
 }
 $('chSel').addEventListener('change', e => {
-  const x = chars[+e.target.value]; chr = x.c; selKey = x.s + '/' + x.c.uuid; log('کانال: ' + selKey);
+  const x = chars[+e.target.value]; chr = x.c; selKey = x.s + '/' + x.c.uuid; LS.set('pt260:chan', selKey); log('کانال: ' + selKey);
 });
 async function connect(mode){
   if (!navigator.bluetooth) { $('nobt').hidden = false; throw new Error('Web Bluetooth در این مرورگر نیست'); }
@@ -295,6 +297,7 @@ async function ensureConnected(){
   throw new Error('اتصال مجدد ناموفق بود');
 }
 async function write(chunk){
+  if (!chr) throw new Error('کانال قطع شد');
   const p = chr.properties;
   if ($('wmode').value !== 'resp' && p.writeWithoutResponse && chr.writeValueWithoutResponse) return chr.writeValueWithoutResponse(chunk);
   if (chr.writeValueWithResponse) return chr.writeValueWithResponse(chunk);
@@ -304,8 +307,8 @@ async function gate(){
   if (job.stop) throw STOP;
   while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
 }
-async function sendAll(data){
-  const cs = Math.max(10, +$('chunk').value || 100), dl = Math.max(0, +$('delay').value || 0);
+async function sendAll(data, csO, dlO){
+  const cs = csO || Math.max(10, +$('chunk').value || 20), dl = (dlO !== undefined) ? dlO : Math.max(0, +$('delay').value || 0);
   for (let i = 0; i < data.length; i += cs) {
     await gate();
     await write(data.subarray(i, i + cs));
@@ -444,6 +447,23 @@ $('bTest').onclick = async () => {
     await printWithRetry(escpos(bits, h));
     log('چاپ تست ارسال شد');
   } catch(e){ log('چاپ تست: ' + e.message); setStatus('خطا: ' + e.message, false); }
+};
+$('bAllCh').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!device || !device.gatt.connected || !chars.length) await connect('filter');
+    const enc = new TextEncoder(), keep = +$('chSel').value || 0;
+    for (let i = 0; i < chars.length; i++) {
+      const x = chars[i]; chr = x.c;
+      const label = 'CH' + (i + 1) + ' ' + short(x.s) + '/' + short(x.c.uuid);
+      setStatus('تست ' + label + ' …', true); log('تست متن: ' + label);
+      try { await sendAll(concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), new Uint8Array([0x1b, 0x64, 3])]), 20, 15); }
+      catch(e){ log('کانال ' + (i + 1) + ' خطا: ' + errText(e)); }
+      await sleep(1500);
+    }
+    chr = chars[keep].c; setStatus('متصل: ' + (device.name || 'پرینتر'), true);
+    log('تمام شد. روی کاغذ ببین کدام CH چاپ شده و همان را در «کانال ارسال» انتخاب کن');
+  } catch(e){ log('تست کانال‌ها: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bStart').onclick = startJob;
 $('bPause').onclick = () => {
