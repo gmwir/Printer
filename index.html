@@ -33,15 +33,22 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۲</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۴</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
   <h2>۱) اتصال</h2>
   <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button><button id="bNew">نمایش همه‌ی دستگاه‌ها</button></div>
   <div class="row"><span class="pill" id="st">متصل نیست</span></div>
+  <div class="row"><label>زبان پرینتر
+      <select id="lang" data-save>
+        <option value="escpos">ESC/POS (پیش‌فرض)</option>
+        <option value="tspl">TSPL</option>
+        <option value="cpcl">CPCL</option>
+      </select>
+    </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button></div>
+  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
 <div class="card">
@@ -92,15 +99,21 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </div>
 
 <div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
-  <div class="row"><button data-prof="20,20">ایمن</button><button data-prof="100,8">متعادل</button><button data-prof="200,5">سریع</button></div>
+  <div class="row"><button data-prof="180,0,auto">یک‌جا (سریع)</button><button data-prof="100,8,resp">متعادل</button><button data-prof="20,20,resp">ایمن (کند)</button></div>
   <div class="row">
-    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="100" min="10" max="512" inputmode="numeric" data-save></label>
-    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="8" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="180" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
     <label>نوع نوشتن
-      <select id="wmode" data-save><option value="resp">با تأیید (پایدارتر)</option><option value="auto">بدون تأیید (سریع‌تر)</option></select>
+      <select id="wmode" data-save><option value="auto">بدون تأیید (یک‌جا و سریع)</option><option value="resp">با تأیید (کندتر، پایدارتر)</option></select>
     </label>
   </div>
-  <p style="font-size:13px;color:var(--mut)">اگر چاپ ناقص یا خراب شد «ایمن» را بزن. اگر خیلی کند بود «سریع».</p>
+  <div class="row">
+    <label>عرض لیبل (mm)<input type="number" id="lw" value="58" min="10" max="120" inputmode="numeric" data-save></label>
+    <label>ارتفاع لیبل (mm، ۰ = خودکار)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
+    <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="2" min="0" max="25" inputmode="numeric" data-save></label>
+  </div>
+  <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
+  <p style="font-size:13px;color:var(--mut)">«یک‌جا» کل صفحه را پشت‌سرهم و بدون مکث می‌فرستد تا قبل از قطع شدن اتصال تمام شود. اگر چاپ ناقص یا خراب شد «متعادل» و بعد «ایمن» را بزن.</p>
 </details></div>
 
 <div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
@@ -133,8 +146,10 @@ document.querySelectorAll('[data-save]').forEach(el => {
   el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
 });
 document.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => {
-  const [c, d] = b.dataset.prof.split(',');
+  const [c, d, w] = b.dataset.prof.split(',');
   $('chunk').value = c; $('delay').value = d; LS.set('pt260:chunk', c); LS.set('pt260:delay', d);
+  if (w) { $('wmode').value = w; LS.set('pt260:wmode', w); }
+  log('پروفایل ارسال: بسته ' + c + ' بایت، تأخیر ' + d + ' ms، ' + (w || 'بدون تغییر'));
 });
 $('thv').textContent = $('thr').value;
 $('thr').addEventListener('input', () => { $('thv').textContent = $('thr').value; sched(); });
@@ -202,8 +217,20 @@ async function buildPage(i){
     const { im, u } = await loadImg(src.files[i]);
     try { cv = fit(im, im.naturalWidth, im.naturalHeight, $('rot').checked); } finally { URL.revokeObjectURL(u); }
   }
+  cv = fitLabel(cv);
   if ($('rot180').checked) cv = rotate180(cv);
   return mono(cv, $('mode').value, +$('thr').value);
+}
+function fitLabel(cv){
+  const lh = Math.max(0, +$('lh').value || 0);
+  if (!lh) return cv;
+  const H = Math.round(lh * 8);
+  if (cv.height <= H) return cv;
+  const s = H / cv.height, nw = Math.max(8, Math.round(W * s));
+  const o = document.createElement('canvas'); o.width = W; o.height = H;
+  const x = o.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(cv, Math.round((W - nw) / 2), 0, nw, H); return o;
 }
 function rotate180(cv){
   const o = document.createElement('canvas'); o.width = cv.width; o.height = cv.height;
@@ -229,6 +256,37 @@ function escpos(bits, h, noInit){
   }
   parts.push(new Uint8Array(tail()));
   return concat(parts);
+}
+
+/* ---------- زبان‌های پرینتر: TSPL و CPCL ---------- */
+const HEXT = Array.from({ length: 256 }, (_, i) => (i < 16 ? '0' : '') + i.toString(16).toUpperCase());
+function tsplJob(bits, h){
+  const enc = new TextEncoder();
+  const lh = Math.max(0, +$('lh').value || 0), lw = Math.max(10, +$('lw').value || 58), gap = Math.max(0, +$('gapmm').value || 0);
+  const hm = lh || Math.max(1, Math.ceil(h / 8));
+  const gapLine = lh ? 'GAP ' + gap + ' mm,0 mm' : 'GAP 0 mm,0 mm';
+  const data = $('inv').checked ? bits.map(b => b ^ 0xFF) : bits;
+  const head = 'SIZE ' + lw + ' mm,' + hm + ' mm\r\n' + gapLine + '\r\nDIRECTION 0\r\nCLS\r\nBITMAP 0,0,' + BYTES + ',' + h + ',0,';
+  return concat([enc.encode(head), data, enc.encode('\r\nPRINT 1,1\r\n')]);
+}
+function cpclJob(bits, h){
+  const enc = new TextEncoder(), parts = [];
+  for (let i = 0; i < bits.length; i++) parts.push(HEXT[bits[i]]);
+  const form = $('after').value !== 'lines';
+  const s = '! 0 200 200 ' + h + ' 1\r\nPW ' + W + '\r\nEG ' + BYTES + ' ' + h + ' 0 0 ' + parts.join('') + '\r\n' + (form ? 'FORM\r\n' : '') + 'PRINT\r\n';
+  return enc.encode(s);
+}
+function jobBytes(bits, h, lang){
+  const l = lang || $('lang').value;
+  if (l === 'tspl') return tsplJob(bits, h);
+  if (l === 'cpcl') return cpclJob(bits, h);
+  return escpos(bits, h);
+}
+function labelBits(text){
+  const lc = document.createElement('canvas'); lc.width = W; lc.height = 64;
+  const lx = lc.getContext('2d'); lx.fillStyle = '#fff'; lx.fillRect(0, 0, W, 64); lx.fillStyle = '#000';
+  lx.font = 'bold 34px sans-serif'; lx.textAlign = 'center'; lx.textBaseline = 'middle'; lx.fillText(text, W / 2, 34);
+  return mono(lc, 'th', 128);
 }
 
 /* ---------- بلوتوث ---------- */
@@ -398,7 +456,7 @@ async function startJob(){
       await gate();
       setP('برگ ' + p + ' از ' + to + ' — آماده‌سازی…');
       const { bits, h } = await buildPage(p - 1);
-      const data = escpos(bits, h);
+      const data = jobBytes(bits, h);
       for (let c = 1; c <= copies; c++) {
         setP('برگ ' + p + ' از ' + to + (copies > 1 ? ' (کپی ' + c + '/' + copies + ')' : '') + ' — در حال چاپ');
         await printWithRetry(data);
@@ -444,8 +502,8 @@ $('bTest').onclick = async () => {
     job.stop = false; job.paused = false;
     if (!device) await connect('filter');
     const { bits, h } = mono(testCanvas(), 'th', 128);
-    await printWithRetry(escpos(bits, h));
-    log('چاپ تست تصویر ارسال شد');
+    await printWithRetry(jobBytes(bits, h));
+    log('چاپ تست تصویر ارسال شد (' + $('lang').value + ')');
   } catch(e){ log('چاپ تست: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bAllCh').onclick = async () => {
@@ -460,7 +518,7 @@ $('bAllCh').onclick = async () => {
       const lx = lc.getContext('2d'); lx.fillStyle = '#fff'; lx.fillRect(0, 0, W, 64); lx.fillStyle = '#000';
       lx.font = 'bold 34px sans-serif'; lx.textAlign = 'center'; lx.textBaseline = 'middle'; lx.fillText(label, W / 2, 34);
       const lm = mono(lc, 'th', 128);
-      const data = concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), escpos(lm.bits, lm.h, true)]);
+      const data = $('lang').value === 'escpos' ? concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), escpos(lm.bits, lm.h, true)]) : jobBytes(lm.bits, lm.h);
       try { await printWithRetry(data, i); log('ارسال شد: ' + label); }
       catch(e){ log(k.n + ' خطا: ' + errText(e)); }
       await sleep(1200);
@@ -468,6 +526,21 @@ $('bAllCh').onclick = async () => {
     chr = null; curIdx = -1; setStatus('تست کانال‌ها تمام شد', true);
     log('روی کاغذ ببین کدام CH چاپ شده و همان را در «کانال ارسال» انتخاب کن');
   } catch(e){ log('تست کانال‌ها: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
+};
+$('bLang').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!device) await connect('filter');
+    for (const lg of ['escpos', 'tspl', 'cpcl']) {
+      const label = lg.toUpperCase(), lb = labelBits(label);
+      setStatus('تست زبان ' + label + ' …', true); log('تست زبان: ' + label);
+      try { await printWithRetry(jobBytes(lb.bits, lb.h, lg)); log('ارسال شد: ' + label); }
+      catch(e){ log(label + ' خطا: ' + errText(e)); }
+      await sleep(2500);
+    }
+    setStatus('تست زبان‌ها تمام شد', true);
+    log('روی کاغذ ببین کدام زبان (ESCPOS / TSPL / CPCL) چاپ شد و همان را در «زبان پرینتر» انتخاب کن');
+  } catch(e){ log('تست زبان‌ها: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bStart').onclick = startJob;
 $('bPause').onclick = () => {
