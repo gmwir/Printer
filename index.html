@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۱۹</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۰</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -50,7 +50,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
+  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bResp">۶) تست پاسخ پرینتر (برای تأیید چاپ واقعی)</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
 <div class="card">
@@ -115,13 +115,13 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </div>
 
 <div class="card"><details><summary>تنظیمات پیشرفته (سرعت ارسال)</summary>
-  <div class="row"><button data-prof="180,0,win,4">پنجره‌ای (سریع، پیشنهادی)</button><button data-prof="180,0,auto,0">بی‌وقفه</button><button data-prof="180,0,resp,1">با تأیید هر بسته</button></div>
+  <div class="row"><button data-prof="180,0,resp,1">با تأیید هر بسته (مطمئن، پیش‌فرض)</button><button data-prof="180,0,win,4">پنجره‌ای (سریع‌تر، ریسک افت بسته)</button><button data-prof="180,0,auto,0">بی‌وقفه (فقط تست)</button></div>
   <div class="row">
     <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="180" min="10" max="512" inputmode="numeric" data-save></label>
     <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
     <label>بسته‌ها بین هر تأیید<input type="number" id="win" value="4" min="1" max="64" inputmode="numeric" data-save></label>
     <label>نوع نوشتن
-      <select id="wmode" data-save><option value="win">پنجره‌ای: چند بسته بدون تأیید، بعد یک تأیید (پیش‌فرض)</option><option value="auto">بدون هیچ تأیید (خطر از دست رفتن بسته)</option><option value="resp">با تأیید هر بسته (کند)</option></select>
+      <select id="wmode" data-save><option value="resp">با تأیید هر بسته (مطمئن، پیش‌فرض)</option><option value="win">پنجره‌ای: چند بسته بدون تأیید، بعد یک تأیید</option><option value="auto">بدون هیچ تأیید (ممکن است بسته‌ها بی‌صدا گم شوند)</option></select>
     </label>
   </div>
   <div class="row">
@@ -129,12 +129,13 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
     <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="3" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
+  <label class="chk"><input type="checkbox" id="vf" data-save disabled> تأیید پاسخ پرینتر بعد از هر لیبل (پس از موفق شدن «۶) تست پاسخ» فعال می‌شود)</label>
   <label class="chk"><input type="checkbox" id="ntf" data-save> فعال‌سازی اعلان‌های پرینتر (تشخیص)</label>
   <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
     <div class="row"><label>بعد از قطع شدن، ادامه از
       <select id="resume" data-save>
-        <option value="page">ابتدای همان برگ — سریع (پیش‌فرض)</option>
-        <option value="byte">همان نقطه — بدون تکرار ولی بسیار کند</option>
+        <option value="byte">همان نقطه — بدون تکرار (پیش‌فرض)</option>
+        <option value="page">ابتدای همان برگ (ممکن است بالای برگ تکراری شود)</option>
       </select>
     </label></div>
   <p style="font-size:13px;color:var(--mut)">«یک‌جا» کل صفحه را پشت‌سرهم و بدون مکث می‌فرستد تا قبل از قطع شدن اتصال تمام شود. اگر چاپ ناقص یا خراب شد «متعادل» و بعد «ایمن» را بزن.</p>
@@ -163,7 +164,7 @@ function setP(t){ big(t); }
 function short(u){ u = String(u).toUpperCase(); return /^0000[0-9A-F]{4}-0000-1000-8000-00805F9B34FB$/.test(u) ? u.slice(4,8) : (u.length > 8 ? u.slice(0,8) : u); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
-if (LS.get('pt260:ver') !== '19') { ['chunk','delay','wmode','resume','q','ntf','win','lh','gapmm','gm'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '19'); }
+if (LS.get('pt260:ver') !== '20') { ['chunk','delay','wmode','resume','q','ntf','win','lh','gapmm','gm','ch','lang','after','vf','resp'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '20'); }
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
 document.querySelectorAll('[data-save]').forEach(el => {
   const k = 'pt260:' + el.id, v = LS.get(k);
@@ -576,23 +577,27 @@ async function openChar(idx){
   curIdx = idx; tConn = Date.now();
   setStatus('متصل: ' + (device.name || 'پرینتر') + ' (' + k.n + ')', true);
   await sleep(350);
-  if ($('ntf').checked) {
-    try {
-      const cs = await withTimeout(svc.getCharacteristics(), 4000);
-      for (const c of cs) {
-        const pr = c.properties;
-        if (!(pr.notify || pr.indicate)) continue;
-        try {
-          await withTimeout(c.startNotifications(), 4000);
-          c.addEventListener('characteristicvaluechanged', ev => {
-            if (ntfN++ >= 60) return;
-            const v = new Uint8Array(ev.target.value.buffer, ev.target.value.byteOffset, ev.target.value.byteLength);
-            log('اعلان ' + short(c.uuid) + ': ' + Array.from(v).map(b => b.toString(16).padStart(2, '0')).join(' '));
-          });
-        } catch(e){ log('اعلان ' + short(c.uuid) + ' ناموفق: ' + errText(e)); }
-      }
-    } catch(e){ log('فهرست مشخصه‌ها: ' + errText(e)); }
-  }
+  if ($('ntf').checked || ntfForce || verifyOn()) await subscribeAll(svc);
+}
+const RX = []; let ntfForce = false;
+function respCfg(){ try { return JSON.parse(LS.get('pt260:resp') || 'null'); } catch(e){ return null; } }
+const verifyOn = () => { const c = respCfg(); return !!(c && $('vf').checked && c.ch === chIdx); };
+function vfUpdate(){ const c = respCfg(); $('vf').disabled = !c; if (!c) $('vf').checked = false; }
+async function subscribeAll(svc){
+  try {
+    const cs = await withTimeout(svc.getCharacteristics(), 4000);
+    for (const c of cs) {
+      const pr = c.properties; if (!(pr.notify || pr.indicate)) continue;
+      try {
+        await withTimeout(c.startNotifications(), 4000);
+        c.addEventListener('characteristicvaluechanged', ev => {
+          const dv = ev.target.value, v = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), hex = Array.from(v).map(b => b.toString(16).padStart(2, '0')).join(' ');
+          RX.push({ t: Date.now(), ch: short(c.uuid), hex });
+          if (ntfN++ < 60) log('اعلان ' + short(c.uuid) + ': ' + hex);
+        });
+      } catch(e){ log('اعلان ' + short(c.uuid) + ' ناموفق: ' + errText(e)); }
+    }
+  } catch(e){ log('فهرست مشخصه‌ها: ' + errText(e)); }
 }
 function attach(d){
   if (d._pt) return; d._pt = 1;
@@ -727,6 +732,13 @@ async function printUnit(data, idx, meta){
   }
 }
 const printWithRetry = (data, idx) => printUnit(data, idx, null);
+async function verifyUnit(){
+  const cfg = respCfg(); RX.length = 0;
+  await write(new Uint8Array(cfg.q), 1);
+  const t0 = Date.now();
+  while (Date.now() - t0 < 8000) { if (RX.length) return true; await gate(); await sleep(100); }
+  return false;
+}
 
 /* ---------- فایل و پیش‌نمایش ---------- */
 let pt = null, pvTok = 0;
@@ -823,6 +835,8 @@ async function startJob(){
   const total = (to - from + 1) * copies; let done = 0;
   $('prog').max = total; $('prog').value = 0;
   let gateDone = false;
+  PS.ver = 0;
+  log('پیش‌بررسی: زبان ' + $('lang').value + ' • کانال ' + CANDS[chIdx].n + ' • ارسال ' + $('wmode').value + ' • ادامه ' + $('resume').value + ' • فید ' + $('after').value + ' • تأیید پرینتر ' + (verifyOn() ? 'روشن' : 'خاموش'));
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
@@ -839,6 +853,14 @@ async function startJob(){
         const meta = { label: PS.label + (copies > 1 ? ' (کپی ' + c + '/' + copies + ')' : ''), hold: false };
         PS.label = meta.label;
         await printUnit(data, undefined, meta);
+        if (verifyOn()) {
+          big('⏳ منتظر تأیید پرینتر برای ' + meta.label + '…', 'run');
+          let v;
+          try { v = await verifyUnit(); }
+          catch(e1){ if (e1 === STOP) throw e1; try { await ensureConnected(undefined, meta); v = await verifyUnit(); } catch(e2){ if (e2 === STOP) throw e2; v = false; } }
+          if (!v) throw Object.assign(new Error('پرینتر بعد از ارسال پاسخ نداد'), { verify: true });
+          PS.ver++;
+        }
         done++; $('prog').value = done; statsLine();
         if (!gateDone && total > 1 && !isOk()) {
           gateDone = true; big('✋ لیبل اول چاپ شد؛ منتظر تأیید تو (بررسی هم‌ترازی)', 'warn'); await sleep(1500);
@@ -849,10 +871,12 @@ async function startJob(){
       LS.set('pt260p:' + src.sig, String(p));
     }
     LS.set('pt260p:' + src.sig, '0');
-    big('✓ چاپ تمام شد (' + total + ' برگ) — قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec, 'ok');
+    if (verifyOn()) big('✓ ' + PS.ver + ' لیبل ارسال شد و پرینتر دریافت هر کدام را تأیید کرد — قطع‌شدن: ' + PS.disc, 'ok');
+    else big('ارسال انجام شد (' + total + ' برگ) — چاپ فیزیکی تأیید نشده؛ لیبل‌ها را روی کاغذ بشمار. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec, 'warn');
   } catch(e){
     if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — دفعه‌ی بعد از همین‌جا ادامه می‌دهد', 'warn');
-    else { big('✗ خطا: ' + errText(e), 'bad'); log('ERR ' + errText(e)); }
+    else if (e && e.verify) { big('⚠ ارسال شد ولی پرینتر پاسخ نداد (' + (PS.label || '') + ') — توقف برای جلوگیری از هدررفت لیبل. روی کاغذ را بررسی کن', 'warn'); log('تأیید ناموفق در ' + (PS.label || '')); }
+    else { big('✗ خطا (چاپ انجام نشد یا ناقص است): ' + errText(e), 'bad'); log('ERR ' + errText(e)); }
   } finally {
     job.running = false; ui(false); statsLine();
     try { wlk && wlk.release(); } catch(e){}
@@ -887,7 +911,7 @@ $('bTest').onclick = async () => {
     if (!device) await connect('filter');
     const { bits, h } = mono(testCanvas(), 'th', 128);
     await printWithRetry(jobBytes(bits, h));
-    log('چاپ تست تصویر ارسال شد (' + $('lang').value + ')');
+    log('ارسال شد (' + $('lang').value + ') — چاپ را روی کاغذ بررسی کن');
   } catch(e){ log('چاپ تست: ' + errText(e)); setStatus('خطا: ' + errText(e), false); }
 };
 $('bAllCh').onclick = async () => {
@@ -903,7 +927,7 @@ $('bAllCh').onclick = async () => {
       lx.font = 'bold 34px sans-serif'; lx.textAlign = 'center'; lx.textBaseline = 'middle'; lx.fillText(label, W / 2, 34);
       const lm = mono(lc, 'th', 128);
       const data = $('lang').value === 'escpos' ? concat([new Uint8Array([0x1b, 0x40]), enc.encode(label + '\n'), escpos(lm.bits, lm.h, true)]) : jobBytes(lm.bits, lm.h);
-      try { await printWithRetry(data, i); log('ارسال شد: ' + label); }
+      try { await printWithRetry(data, i); log('ارسال شد (روی کاغذ بررسی کن): ' + label); }
       catch(e){ log(k.n + ' خطا: ' + errText(e)); }
       await sleep(1200);
     }
@@ -986,6 +1010,33 @@ $('bCal').onclick = async () => {
     } else { log('کالیبراسیون: هیچ روشی تأیید نشد — عکس لیبل‌ها را برای تحلیل بفرست'); big('هیچ روشی تأیید نشد', 'warn'); }
   } catch(e){ $('after').value = saved.after; $('lang').value = saved.lang; log('کالیبراسیون: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
 };
+$('bResp').onclick = async () => {
+  const keep = chIdx;
+  try {
+    job.stop = false; job.paused = false; ntfForce = true;
+    if (!device) await connect('filter');
+    const Q = [['DLE EOT 1', [0x10, 4, 1]], ['GS I 1', [0x1d, 0x49, 1]], ['GS I 65', [0x1d, 0x49, 65]], ['GS r 1', [0x1d, 0x72, 1]], ['DLE EOT 4', [0x10, 4, 4]]], found = [];
+    for (let i = 0; i < CANDS.length; i++) {
+      big('تست پاسخ روی ' + CANDS[i].n + '…', 'run');
+      try { chr = null; curIdx = -1; await withTimeout(openChar(i), 14000); } catch(e){ log(CANDS[i].n + ': اتصال ' + errText(e)); continue; }
+      for (const [nm, q] of Q) {
+        RX.length = 0;
+        try { await write(new Uint8Array(q), 1); } catch(e){ log(CANDS[i].n + ' ' + nm + ': ' + errText(e)); break; }
+        await sleep(900);
+        if (RX.length) { found.push({ ch: i, nm, q, hex: RX.map(r => r.ch + ':' + r.hex).join(' | ') }); log('پاسخ ' + CANDS[i].n + ' به ' + nm + ': ' + found[found.length - 1].hex); }
+      }
+    }
+    ntfForce = false; chIdx = keep; chr = null; curIdx = -1;
+    try { await withTimeout(openChar(keep), 14000); } catch(e){}
+    const pick = found.find(f => f.ch === keep) || found[0];
+    if (pick) {
+      LS.set('pt260:resp', JSON.stringify({ ch: pick.ch, q: pick.q, nm: pick.nm })); vfUpdate();
+      if (pick.ch === keep) { $('vf').checked = true; LS.set('pt260:vf', '1'); big('✓ پرینتر به «' + pick.nm + '» روی ' + CANDS[pick.ch].n + ' پاسخ داد؛ تأیید بعد از هر لیبل فعال شد', 'ok'); }
+      else big('پرینتر فقط روی ' + CANDS[pick.ch].n + ' پاسخ داد. اگر آن کانال چاپ می‌کند، آن را انتخاب کن و تأیید را روشن کن', 'warn');
+    } else { LS.set('pt260:resp', ''); vfUpdate(); big('پرینتر روی هیچ کانالی پاسخ نداد؛ تأیید خودکار چاپ ممکن نیست و فقط ارسال بایت‌ها گزارش می‌شود', 'warn'); log('هیچ پاسخی دریافت نشد'); }
+  } catch(e){ ntfForce = false; log('تست پاسخ: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
+};
+vfUpdate();
 $('bStart').onclick = startJob;
 $('bPause').onclick = () => {
   job.paused = !job.paused;
