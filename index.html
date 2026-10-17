@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۰</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۱</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -50,7 +50,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
-  <div class="row"><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bResp">۶) تست پاسخ پرینتر (برای تأیید چاپ واقعی)</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
+  <div class="row"><button id="bMin">۰) تست حداقلی (۳ لیبل کوچک، فقط برای تشخیص)</button><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bResp">۶) تست پاسخ پرینتر (برای تأیید چاپ واقعی)</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
 <div class="card">
@@ -1009,6 +1009,35 @@ $('bCal').onclick = async () => {
       markOk(); big('✓ تنظیم ذخیره شد: ' + pick[1] + ' (' + pick[2] + ')', 'ok'); log('کالیبراسیون: روش ' + pick[0] + ' انتخاب شد');
     } else { log('کالیبراسیون: هیچ روشی تأیید نشد — عکس لیبل‌ها را برای تحلیل بفرست'); big('هیچ روشی تأیید نشد', 'warn'); }
   } catch(e){ $('after').value = saved.after; $('lang').value = saved.lang; log('کالیبراسیون: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
+};
+$('bMin').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!device) await connect('filter');
+    await ensureConnected();
+    const enc = new TextEncoder(), c = chr, pr = c.properties;
+    log('تست حداقلی: سرویس/مشخصه ' + CANDS[chIdx].label + ' • خواص: ' + ['write', 'writeWithoutResponse', 'notify'].filter(k => pr[k]).join(',') + ' • اتصال: ' + (device.gatt.connected ? 'برقرار' : 'قطع'));
+    const tspl = t => { const b = labelBits(t); return tsplJob(b.bits, b.h); }; // همان دنباله‌ای که در نسخه ۱۹ روی کاغذ چاپ شد
+    const V = [
+      ['A', 'TSPL بدون تأیید (مثل نسخه ۱۹)', tspl('A-NR'), 'win'],
+      ['B', 'TSPL با تأیید هر بسته (پیش‌فرض نسخه ۲۰)', tspl('B-ACK'), 'ack'],
+      ['C', 'ESC/POS متن ساده', concat([new Uint8Array([0x1b, 0x40]), enc.encode('C-ESC TEXT\n\n\n')]), 'ack']
+    ];
+    for (const [id, nm, data, mode] of V) {
+      big('تست حداقلی ' + id + ': ' + nm + '…', 'run'); log('حداقلی ' + id + ': ' + nm + ' — ' + data.length + ' بایت');
+      let n = 0;
+      try {
+        for (let off = 0; off < data.length; off += 180, n++) {
+          const part = data.slice(off, off + 180), acked = mode === 'ack' || n % 4 === 3 || off + 180 >= data.length;
+          if (acked) await withTimeout(c.writeValueWithResponse ? c.writeValueWithResponse(part) : c.writeValue(part), 8000);
+          else await withTimeout(c.writeValueWithoutResponse(part), 8000);
+        }
+        log('حداقلی ' + id + ': ' + n + ' بسته نوشته شد (چاپ هنوز تأیید نشده)');
+      } catch(e){ log('حداقلی ' + id + ' خطا بعد از ' + n + ' بسته: ' + errText(e)); }
+      await sleep(3500);
+    }
+    big('ارسال تمام شد — روی کاغذ ببین کدام لیبل‌ها (A-NR / B-ACK / C-ESC) چاپ شده؛ چاپ فیزیکی تأیید نشده', 'warn');
+  } catch(e){ log('تست حداقلی: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
 };
 $('bResp').onclick = async () => {
   const keep = chIdx;
