@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۳</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۴</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -50,6 +50,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
+  <div class="row"><button id="bRul"><b>۸) تست خط‌کش محل چاپ (۱ لیبل)</b></button></div>
   <div class="row"><button id="bFin"><b>۷) تست نهایی: یک لیبل (CPCL • CH1 • ارسال تأییدی)</b></button></div>
   <div class="row"><button id="bMin">۰) تست حداقلی (۳ لیبل کوچک، فقط برای تشخیص)</button><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bResp">۶) تست پاسخ پرینتر (برای تأیید چاپ واقعی)</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
@@ -128,6 +129,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <div class="row">
     <label>عرض لیبل (mm)<input type="number" id="lw" value="57" min="10" max="120" inputmode="numeric" data-save></label>
     <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="30" min="0" max="300" inputmode="numeric" data-save></label>
+    <label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="0" min="-400" max="400" inputmode="numeric" data-save></label>
     <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR روی لیبل چاپ شود</label>
     <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="3" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
@@ -486,15 +488,19 @@ function mono(cv, mode, thr){
   }
   return { bits, h };
 }
+function applyY(cv){ // جابه‌جایی عمودی کل محتوای لیبل (تنظیم محل چاپ روی کاغذ؛ جدا از محتوای PDF)
+  const yo = Math.round(+$('yoff').value || 0); if (!yo) return cv;
+  const o = lcan(cv.width, cv.height); o.getContext('2d').drawImage(cv, 0, yo); return o;
+}
 async function buildPage(i){
   let cv;
   if (src.type === 'csv') {
-    cv = csvLabel(src.rows[i]);
+    cv = applyY(csvLabel(src.rows[i]));
     if ($('rot180').checked) cv = rotate180(cv);
     return mono(cv, 'th', 128);
   }
   if (src.type === 'pdf' && src.items && src.items[i] && src.items[i].cell) {
-    cv = cellLabel(src.items[i].cell);
+    cv = applyY(cellLabel(src.items[i].cell));
     if ($('rot180').checked) cv = rotate180(cv);
     return mono(cv, 'th', 128);
   }
@@ -678,7 +684,7 @@ async function connect(mode, force){
 const isUp = i => device && device.gatt.connected && chr && curIdx === (i === undefined ? chIdx : i);
 
 /* ---------- وضعیت چاپ ---------- */
-const PS = { disc: 0, rec: 0, bytes: 0, t0: 0, delay: null, cleanPages: 0, label: '', page: 0 };
+const PS = { susp: new Set(), disc: 0, rec: 0, bytes: 0, t0: 0, delay: null, cleanPages: 0, label: '', page: 0 };
 const userDelay = () => Math.max(0, +$('delay').value || 0);
 const curDelay = () => PS.delay == null ? userDelay() : PS.delay;
 const fmtT = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -759,9 +765,10 @@ async function printUnit(data, idx, meta){
     att++;
     try {
       await ensureConnected(idx, meta);
+      // کاوشگر سلامت اتصال پیش از داده‌ی لیبل: اگر لینک مرده باشد خطا روی همین ۲ بایت می‌آید، نه روی بستهٔ اول لیبل (جلوگیری از ارسال نیمه‌کاره/تکراری)
+      if (st.off === 0) await write(lang === 'escpos' ? new Uint8Array([0x1b, 0x40]) : new Uint8Array([13, 10]), 0);
       if (att > 1) {
         if (meta) { big('✓ دوباره وصل شد — ادامه‌ی چاپ از ' + meta.label + ($('resume').value === 'byte' ? ' (همان نقطه، بدون تکرار)' : ' (ابتدای برگ)'), 'ok'); meta.hold = true; }
-        if (lang !== 'escpos' && st.off === 0) await write(new Uint8Array([13, 10]), 0);
       }
       await sendAll(data, st, meta);
       PS.cleanPages = fails ? 0 : PS.cleanPages + 1;
@@ -771,6 +778,7 @@ async function printUnit(data, idx, meta){
       if (e === STOP) throw e;
       fails++;
       if (fails >= (meta ? 40 : 6)) throw e;
+      if (meta && st.off > 0) PS.susp.add(meta.label);
       log('خطای ارسال (تلاش ' + att + ') در ' + st.off + '/' + data.length + ': ' + errText(e));
       if ($('resume').value !== 'byte') st.off = 0;
       if (st.off > (st.max || 0)) { st.max = st.off; st.stall = 0; } else st.stall = (st.stall || 0) + 1;
@@ -872,24 +880,36 @@ function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
-const profKey = () => [device && device.name, $('lw').value, $('lh').value, $('gapmm').value, $('lang').value, $('after').value, $('q').value].join('|');
+const profKey = () => [device && device.name, $('lw').value, $('lh').value, $('gapmm').value, $('lang').value, $('after').value, $('q').value, $('yoff').value].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
 async function wakeOn(){ try { wlk = await navigator.wakeLock.request('screen'); } catch(e){} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && job.running) wakeOn(); });
+const LAST = { sig: '', p: 0 }; // آخرین برگی که در این نشست برای این فایل فرستاده شد
 async function startJob(){
   if (!src.count) { alert('اول فایل را انتخاب کن'); return; }
-  const from = Math.max(1, +$('from').value || 1), to = Math.min(src.count, +$('to').value || src.count);
+  let from = Math.max(1, +$('from').value || 1); const to = Math.min(src.count, +$('to').value || src.count);
   const copies = Math.max(1, +$('copies').value || 1);
   if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
+  // جلوگیری از چاپ تکراری: برگ‌هایی از همین فایل که قبلاً در همین نشست فرستاده شده‌اند
+  if (LAST.sig === src.sig && LAST.p >= from) {
+    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
+      from = LAST.p + 1; $('from').value = from;
+      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً چاپ شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
+    }
+  }
   job.running = true; job.paused = false; job.stop = false; curChunk = 0; ui(true);
   Object.assign(PS, { disc: 0, rec: 0, bytes: 0, t0: Date.now(), delay: null, cleanPages: 0, label: '', page: from });
   const total = (to - from + 1) * copies; let done = 0;
+  // جلوگیری از چاپ تکراری: اگر برگ‌هایی از همین فایل در همین نشست قبلاً فرستاده شده‌اند
+  if (LAST.sig === src.sig && LAST.p >= from && LAST.p >= 1) {
+    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) { from2 = LAST.p + 1; }
+  }
   $('prog').max = total; $('prog').value = 0;
   let gateDone = false;
-  PS.ver = 0;
-  log('پیش‌بررسی: زبان ' + $('lang').value + ' • کانال ' + CANDS[chIdx].n + ' • ارسال ' + $('wmode').value + ' • ادامه ' + $('resume').value + ' • فید ' + $('after').value + ' • تأیید پرینتر ' + (verifyOn() ? 'روشن' : 'خاموش'));
+  PS.ver = 0; PS.susp = new Set();
+  log('پیش‌بررسی: زبان ' + $('lang').value + ' • کانال ' + CANDS[chIdx].n + ' • ارسال ' + (($('resume').value === 'byte' || $('wmode').value === 'resp') ? 'تأییدی(resp)' : $('wmode').value) + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • ادامه ' + $('resume').value + ' • فید ' + $('after').value + ' • تأیید پرینتر ' + (verifyOn() ? 'روشن' : 'خاموش'));
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
@@ -906,6 +926,7 @@ async function startJob(){
         const meta = { label: PS.label + (copies > 1 ? ' (کپی ' + c + '/' + copies + ')' : ''), hold: false };
         PS.label = meta.label;
         await printUnit(data, undefined, meta);
+        if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); }
         if (verifyOn()) {
           big('⏳ منتظر تأیید پرینتر برای ' + meta.label + '…', 'run');
           let v;
@@ -925,7 +946,7 @@ async function startJob(){
     }
     LS.set('pt260p:' + src.sig, '0');
     if (verifyOn()) big('✓ ' + PS.ver + ' لیبل ارسال شد و پرینتر دریافت هر کدام را تأیید کرد — قطع‌شدن: ' + PS.disc, 'ok');
-    else big('ارسال انجام شد (' + total + ' برگ) — چاپ فیزیکی تأیید نشده؛ لیبل‌ها را روی کاغذ بشمار. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec, 'warn');
+    else big('ارسال انجام شد (' + total + ' برگ) — چاپ فیزیکی تأیید نشده؛ لیبل‌ها را روی کاغذ بشمار. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec + (PS.susp.size ? ' — ⚠ قطع در میانهٔ ارسال: ' + [...PS.susp].join('، ') + ' (روی کاغذ بررسی کن)' : ''), 'warn');
   } catch(e){
     if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — دفعه‌ی بعد از همین‌جا ادامه می‌دهد', 'warn');
     else if (e && e.verify) { big('⚠ ارسال شد ولی پرینتر پاسخ نداد (' + (PS.label || '') + ') — توقف برای جلوگیری از هدررفت لیبل. روی کاغذ را بررسی کن', 'warn'); log('تأیید ناموفق در ' + (PS.label || '')); }
@@ -1103,13 +1124,36 @@ $('bFin').onclick = async () => {
     if (!device) await connect('filter');
     const H = LH() * 8, cv = csvLabel({ code: 'AY-TEST-001', name: 'تست چاپ فارسی لنت ترمز' }), x = cv.getContext('2d');
     x.strokeStyle = '#000'; x.lineWidth = 4; x.strokeRect(2, 2, W - 4, H - 4);
-    const m = mono(cv, 'th', 128), data = jobBytes(m.bits, m.h, 'cpcl');
+    const m = mono(applyY(cv), 'th', 128), data = jobBytes(m.bits, m.h, 'cpcl');
     log('تست نهایی: CPCL • ' + CANDS[chIdx].n + ' ' + CANDS[chIdx].label + ' • ارسال تأییدی • لیبل ' + $('lw').value + '×' + LH() + ' mm (' + W + '×' + m.h + ' نقطه) • GAP ' + $('gapmm').value + ' mm • فید FORM • ' + data.length + ' بایت');
     big('در حال ارسال یک لیبل…', 'run');
     await printUnit(data, undefined, null);
     log('تست نهایی: ارسال کامل شد (چاپ هنوز تأیید نشده)');
     big('ارسال یک لیبل انجام شد — چاپ فیزیکی تأیید نشده؛ لیبل را ببین: کادر، متن فارسی، کد و QR داخل همین یک لیبل؟', 'warn');
   } catch(e){ if (e === STOP) { big('لغو شد', 'warn'); return; } log('تست نهایی خطا: ' + errText(e)); big('✗ ارسال کامل نشد (چاپ انجام نشده یا ناقص است): ' + errText(e), 'bad'); }
+};
+$('bRul').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    if (!device) await connect('filter');
+    const H = LH() * 8, cv = lcan(W, H), x = cv.getContext('2d');
+    x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineWidth = 2;
+    x.strokeRect(1, 1, W - 2, H - 2); x.fillRect(0, 0, W, 6); x.fillRect(0, H - 6, W, 6);
+    x.font = 'bold 22px monospace'; x.textBaseline = 'middle';
+    for (let mm = 0; mm * 8 <= H; mm++) {
+      const y = mm * 8, long = mm % 5 === 0, len = long ? 44 : 18;
+      x.fillRect(0, y, len, 2); x.fillRect(W - len, y, len, 2);
+      if (long && mm > 0 && y < H - 14) { x.textAlign = 'left'; x.fillText(String(mm), 52, y); x.textAlign = 'right'; x.fillText(String(mm), W - 52, y); }
+    }
+    x.textAlign = 'center'; x.font = 'bold 26px monospace'; x.fillText('TOP', W / 2, 34); x.fillText('END ' + LH() + ' mm', W / 2, H - 34);
+    x.font = '18px monospace'; x.fillText('1 mm = 8 dots', W / 2, H / 2);
+    const m = mono(applyY(cv), 'th', 128), data = jobBytes(m.bits, m.h);
+    log('تست خط‌کش: ' + $('lang').value + ' • ' + CANDS[chIdx].n + ' • لیبل ' + $('lw').value + '×' + LH() + ' mm • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' نقطه • ' + data.length + ' بایت');
+    big('در حال ارسال خط‌کش…', 'run');
+    await printUnit(data, undefined, { label: 'خط‌کش', hold: false });
+    log('تست خط‌کش: ارسال کامل شد (چاپ هنوز تأیید نشده)');
+    big('ارسال شد — چاپ فیزیکی تأیید نشده. روی لیبل بالاترین عدد دیده‌شده و پایین‌ترین عدد/نوشتهٔ END را بخوان', 'warn');
+  } catch(e){ if (e === STOP) { big('لغو شد', 'warn'); return; } log('تست خط‌کش خطا: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
 };
 $('bResp').onclick = async () => {
   const keep = chIdx;
@@ -1141,7 +1185,7 @@ vfUpdate();
 $('bStart').onclick = startJob;
 // جلوگیری از اجرای هم‌زمان کارها (در لاگ نسخه ۱۹ تست‌های سرعت/زبان/کانال هم‌زمان روی یک کانال می‌نوشتند و خروجی‌ها در هم می‌رفت)
 let BUSY = null;
-['bTest', 'bAllCh', 'bLang', 'bBench', 'bCal', 'bMin', 'bFin', 'bResp', 'bStart'].forEach(id => {
+['bTest', 'bAllCh', 'bLang', 'bBench', 'bCal', 'bMin', 'bFin', 'bRul', 'bResp', 'bStart'].forEach(id => {
   const f = $(id).onclick;
   $(id).onclick = async ev => {
     if (BUSY) { log('نادیده گرفته شد: «' + BUSY + '» هنوز در حال اجراست'); big('⚠ کار دیگری در حال اجراست؛ صبر کن تمام شود یا «توقف» بزن', 'warn'); return; }
