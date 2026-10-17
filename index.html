@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۱</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۲</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -44,12 +44,13 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <div class="row"><span class="pill" id="st">متصل نیست</span></div>
   <div class="row"><label>زبان پرینتر
       <select id="lang" data-save>
-        <option value="escpos">ESC/POS (پیش‌فرض)</option>
+        <option value="escpos">ESC/POS</option>
         <option value="tspl">TSPL</option>
-        <option value="cpcl">CPCL</option>
+        <option value="cpcl" selected>CPCL (روی کاغذ چاپ شده؛ پیش‌فرض تا تست نهایی)</option>
       </select>
     </label></div>
   <div class="row" id="charRow" hidden><label>کانال ارسال<select id="chSel"></select></label></div>
+  <div class="row"><button id="bFin"><b>۷) تست نهایی: یک لیبل (CPCL • CH1 • ارسال تأییدی)</b></button></div>
   <div class="row"><button id="bMin">۰) تست حداقلی (۳ لیبل کوچک، فقط برای تشخیص)</button><button id="bAllCh">۱) تست متن روی همه‌ی کانال‌ها</button><button id="bTest">۲) چاپ تست تصویر</button><button id="bResp">۶) تست پاسخ پرینتر (برای تأیید چاپ واقعی)</button><button id="bBench">۴) تست سرعت و اندازه‌ی بسته</button><button id="bCal">۵) کالیبراسیون هم‌ترازی لیبل (۱۰ لیبل)</button><button id="bLang">۳) تست سه زبان (ESC/POS، TSPL، CPCL)</button></div>
 </div>
 
@@ -164,7 +165,7 @@ function setP(t){ big(t); }
 function short(u){ u = String(u).toUpperCase(); return /^0000[0-9A-F]{4}-0000-1000-8000-00805F9B34FB$/.test(u) ? u.slice(4,8) : (u.length > 8 ? u.slice(0,8) : u); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 
-if (LS.get('pt260:ver') !== '20') { ['chunk','delay','wmode','resume','q','ntf','win','lh','gapmm','gm','ch','lang','after','vf','resp'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '20'); }
+if (LS.get('pt260:ver') !== '22') { ['chunk','delay','wmode','resume','win','ntf','vf','resp'].forEach(k => { try { localStorage.removeItem('pt260:' + k); } catch(e){} }); LS.set('pt260:ver', '22'); } // فقط تنظیمات انتقال ریست می‌شود؛ کانال، زبان، فید و اندازهٔ لیبل دست‌نخورده می‌ماند
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
 document.querySelectorAll('[data-save]').forEach(el => {
   const k = 'pt260:' + el.id, v = LS.get(k);
@@ -1039,6 +1040,25 @@ $('bMin').onclick = async () => {
     big('ارسال تمام شد — روی کاغذ ببین کدام لیبل‌ها (A-NR / B-ACK / C-ESC) چاپ شده؛ چاپ فیزیکی تأیید نشده', 'warn');
   } catch(e){ log('تست حداقلی: ' + errText(e)); big('✗ ' + errText(e), 'bad'); }
 };
+$('bFin').onclick = async () => {
+  try {
+    job.stop = false; job.paused = false;
+    // مسیر آزمایشی انتخاب‌شده طبق شواهد: CPCL روی CH1 در آزمایش واقعی چاپ داد. با زدن همین دکمه ثبت می‌شود.
+    $('lang').value = 'cpcl'; LS.set('pt260:lang', 'cpcl');
+    $('wmode').value = 'resp'; LS.set('pt260:wmode', 'resp'); $('resume').value = 'byte'; LS.set('pt260:resume', 'byte');
+    $('after').value = 'ff'; LS.set('pt260:after', 'ff');
+    if (chIdx !== 0) { chIdx = 0; $('chSel').value = 0; LS.set('pt260:ch', '0'); chr = null; curIdx = -1; log('کانال برای تست نهایی روی CH1 گذاشته شد (به درخواست کاربر/مسیر آزمایشی)'); }
+    if (!device) await connect('filter');
+    const H = LH() * 8, cv = csvLabel({ code: 'AY-TEST-001', name: 'تست چاپ فارسی لنت ترمز' }), x = cv.getContext('2d');
+    x.strokeStyle = '#000'; x.lineWidth = 4; x.strokeRect(2, 2, W - 4, H - 4);
+    const m = mono(cv, 'th', 128), data = jobBytes(m.bits, m.h, 'cpcl');
+    log('تست نهایی: CPCL • ' + CANDS[chIdx].n + ' ' + CANDS[chIdx].label + ' • ارسال تأییدی • لیبل ' + $('lw').value + '×' + LH() + ' mm (' + W + '×' + m.h + ' نقطه) • GAP ' + $('gapmm').value + ' mm • فید FORM • ' + data.length + ' بایت');
+    big('در حال ارسال یک لیبل…', 'run');
+    await printUnit(data, undefined, null);
+    log('تست نهایی: ارسال کامل شد (چاپ هنوز تأیید نشده)');
+    big('ارسال یک لیبل انجام شد — چاپ فیزیکی تأیید نشده؛ لیبل را ببین: کادر، متن فارسی، کد و QR داخل همین یک لیبل؟', 'warn');
+  } catch(e){ if (e === STOP) { big('لغو شد', 'warn'); return; } log('تست نهایی خطا: ' + errText(e)); big('✗ ارسال کامل نشد (چاپ انجام نشده یا ناقص است): ' + errText(e), 'bad'); }
+};
 $('bResp').onclick = async () => {
   const keep = chIdx;
   try {
@@ -1067,6 +1087,15 @@ $('bResp').onclick = async () => {
 };
 vfUpdate();
 $('bStart').onclick = startJob;
+// جلوگیری از اجرای هم‌زمان کارها (در لاگ نسخه ۱۹ تست‌های سرعت/زبان/کانال هم‌زمان روی یک کانال می‌نوشتند و خروجی‌ها در هم می‌رفت)
+let BUSY = null;
+['bTest', 'bAllCh', 'bLang', 'bBench', 'bCal', 'bMin', 'bFin', 'bResp', 'bStart'].forEach(id => {
+  const f = $(id).onclick;
+  $(id).onclick = async ev => {
+    if (BUSY) { log('نادیده گرفته شد: «' + BUSY + '» هنوز در حال اجراست'); big('⚠ کار دیگری در حال اجراست؛ صبر کن تمام شود یا «توقف» بزن', 'warn'); return; }
+    BUSY = id; try { await f(ev); } finally { BUSY = null; }
+  };
+});
 $('bPause').onclick = () => {
   job.paused = !job.paused;
   $('bPause').textContent = job.paused ? 'ادامه' : 'توقف موقت';
