@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۲</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۳</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -126,8 +126,9 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     </label>
   </div>
   <div class="row">
-    <label>عرض لیبل (mm)<input type="number" id="lw" value="58" min="10" max="120" inputmode="numeric" data-save></label>
-    <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="0" min="0" max="300" inputmode="numeric" data-save></label>
+    <label>عرض لیبل (mm)<input type="number" id="lw" value="57" min="10" max="120" inputmode="numeric" data-save></label>
+    <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="30" min="0" max="300" inputmode="numeric" data-save></label>
+    <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR روی لیبل چاپ شود</label>
     <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="3" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
   <label class="chk"><input type="checkbox" id="vf" data-save disabled> تأیید پاسخ پرینتر بعد از هر لیبل (پس از موفق شدن «۶) تست پاسخ» فعال می‌شود)</label>
@@ -224,22 +225,39 @@ function gQR(gray, w, x0, y0, bw, bh){
   return bestM;
 }
 function analyzeGray(gray, w, h){
-  const colP = new Uint32Array(w), rowP = new Uint32Array(h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) { colP[x]++; rowP[y]++; }
-  const cr = gMerge(gRuns(colP), w), rr = gMerge(gRuns(rowP), h);
-  const grid = cr.length * rr.length >= 2 && gRegular(cr) && gRegular(rr);
+  // ردیف‌های بزرگ = QR/تصویر؛ ردیف‌های کوچک = نوشتهٔ زیر QR (کپشن) که نباید شبکه را خراب کند
+  const rowP = new Uint32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) rowP[y]++;
+  const rr0 = gMerge(gRuns(rowP), h), len = r => r[1] - r[0] + 1;
+  const mxR = rr0.reduce((m, r) => Math.max(m, len(r)), 0), rr = rr0.filter(r => len(r) >= mxR * 0.4), small = rr0.filter(r => len(r) < mxR * 0.4);
+  const colP = new Uint32Array(w);
+  for (const r of rr) for (let y = r[0]; y <= r[1]; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) colP[x]++;
+  const cr0 = gMerge(gRuns(colP), w), mxC = cr0.reduce((m, r) => Math.max(m, len(r)), 0), cr = cr0.filter(r => len(r) >= mxC * 0.4);
+  const grid = rr.length * cr.length >= 2 && gRegular(cr) && gRegular(rr);
   const cells = [];
   if (!grid) return { grid: false, cells, cols: cr.length, rows: rr.length };
-  for (const r of rr) for (const c of cr) {
-    let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
-    for (let y = r[0]; y <= r[1]; y++) for (let x = c[0]; x <= c[1]; x++) if (gray[y * w + x] < 110) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    if (x1 < 0) continue;
-    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, qr = gQR(gray, w, x0, y0, bw, bh);
-    const cell = { x0, y0, bw, bh };
-    if (qr) { cell.N = qr.N; cell.mods = qr.mods; }
-    else { cell.bm = new Uint8Array(bw * bh); for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) cell.bm[y * bw + x] = gray[(y0 + y) * w + x0 + x]; }
-    cells.push(cell);
-  }
+  rr.forEach((r, ri) => {
+    const rn = ri + 1 < rr.length ? rr[ri + 1][0] : h;
+    cr.forEach((c, ci) => {
+      let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+      for (let y = r[0]; y <= r[1]; y++) for (let x = c[0]; x <= c[1]; x++) if (gray[y * w + x] < 110) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return;
+      let bw = x1 - x0 + 1, bh = y1 - y0 + 1, qr = gQR(gray, w, x0, y0, bw, bh), capRows = null;
+      if (!qr && bh > bw * 1.04) { const q2 = gQR(gray, w, x0, y0, bw, bw); if (q2) { qr = q2; capRows = [y0 + bw, y1]; bh = bw; } }
+      const cell = { x0, y0, bw, bh, box: { c0: c[0], c1: c[1], r0: r[0], r1: r[1], rn } };
+      if (qr) { cell.N = qr.N; cell.mods = qr.mods; } else { cell.bm = new Uint8Array(bw * bh); for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) cell.bm[y * bw + x] = gray[(y0 + y) * w + x0 + x]; }
+      // کپشن (نوشتهٔ کد زیر QR) به‌صورت تصویر خاکستری، برای حالتی که لایهٔ متن PDF در دسترس نباشد
+      const cs = small.filter(s => s[0] > r[1] && s[0] < rn);
+      let cy0 = cs.length ? cs[0][0] : (capRows ? capRows[0] : -1), cy1 = cs.length ? cs[cs.length - 1][1] : (capRows ? capRows[1] : -1);
+      if (cy0 >= 0 && cy1 > cy0 && qr) {
+        const m = Math.round(len(c) * 0.15), cx0 = Math.max(0, c[0] - m), cx1 = Math.min(w - 1, c[1] + m);
+        let tx0 = 1e9, tx1 = -1, ty0 = 1e9, ty1 = -1;
+        for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++) if (gray[y * w + x] < 170) { if (x < tx0) tx0 = x; if (x > tx1) tx1 = x; if (y < ty0) ty0 = y; if (y > ty1) ty1 = y; }
+        if (tx1 > tx0 && ty1 > ty0 && ty1 - ty0 < len(r)) { const cw = tx1 - tx0 + 1, ch = ty1 - ty0 + 1, bm = new Uint8Array(cw * ch); for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) bm[y * cw + x] = gray[(ty0 + y) * w + tx0 + x]; cell.cap = { w: cw, h: ch, bm }; }
+      }
+      cells.push(cell);
+    });
+  });
   return { grid: true, cells, cols: cr.length, rows: rr.length };
 }
 
@@ -344,12 +362,35 @@ function drawQR(cv, mods, N, x0, y0, wMax, hMax, quiet, even){
   return k;
 }
 function cellLabel(cell){
-  const H = LH() * 8, cv = lcan(W, H), even = $('q').value !== '1';
-  if (cell.mods) { if (drawQR(cv, cell.mods, cell.N, 0, 0, W, H - 8, 3, even)) return cv; }
+  const H = LH() * 8, cv = lcan(W, H), even = $('q').value !== '1', x = cv.getContext('2d');
+  const withCap = $('capt').checked && (cell.text || cell.cap);
+  if (cell.mods) {
+    if (withCap) {
+      const qw = Math.min(H - 8, W - 140), k = drawQR(cv, cell.mods, cell.N, 4, 4, qw, H - 8, 2, even);
+      if (k) {
+        const ax = 4 + qw + 6, aw = W - ax - 6;
+        if (cell.text) {
+          x.fillStyle = '#000'; x.textBaseline = 'middle'; x.direction = /[\u0600-\u06FF]/.test(cell.text) ? 'rtl' : 'ltr'; x.textAlign = x.direction === 'rtl' ? 'right' : 'left';
+          let fs = 34, lines;
+          for (; fs >= 14; fs -= 2) { x.font = 'bold ' + fs + 'px ' + (x.direction === 'rtl' ? 'Tahoma, sans-serif' : 'monospace'); lines = wrapText(x, cell.text, aw, 3); if (lines.every(l => x.measureText(l).width <= aw)) break; }
+          const lh = Math.round(fs * 1.25), y0 = H / 2 - (lines.length - 1) * lh / 2;
+          lines.forEach((l, i) => x.fillText(l, x.direction === 'rtl' ? ax + aw : ax, y0 + i * lh));
+        } else {
+          const g = lcan(cell.cap.w, cell.cap.h), gx = g.getContext('2d'), im = gx.createImageData(cell.cap.w, cell.cap.h);
+          for (let i = 0; i < cell.cap.bm.length; i++) { const v = cell.cap.bm[i]; im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = v; im.data[i*4+3] = 255; }
+          gx.putImageData(im, 0, 0);
+          const s = Math.min(aw / cell.cap.w, (H - 40) / cell.cap.h), dw = Math.round(cell.cap.w * s), dh = Math.round(cell.cap.h * s);
+          x.imageSmoothingEnabled = true; x.drawImage(g, ax, Math.round((H - dh) / 2), dw, dh);
+        }
+        return cv;
+      }
+    }
+    if (drawQR(cv, cell.mods, cell.N, 0, 0, W, H - 8, 3, even)) return cv;
+  }
   const g = lcan(cell.bw, cell.bh), gx = g.getContext('2d'), im = gx.createImageData(cell.bw, cell.bh);
   for (let i = 0; i < cell.bm.length; i++) { const v = cell.bm[i]; im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = v; im.data[i*4+3] = 255; }
   gx.putImageData(im, 0, 0);
-  const s = Math.min((W - 16) / cell.bw, (H - 12) / cell.bh), dw = Math.round(cell.bw * s), dh = Math.round(cell.bh * s), x = cv.getContext('2d');
+  const s = Math.min((W - 16) / cell.bw, (H - 12) / cell.bh), dw = Math.round(cell.bw * s), dh = Math.round(cell.bh * s);
   x.imageSmoothingEnabled = true; x.drawImage(g, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
   return cv;
 }
@@ -386,6 +427,17 @@ async function analyzePdf(pdf, onProg){
     const d = g.getImageData(0, 0, cv.width, cv.height).data, gray = new Uint8Array(cv.width * cv.height);
     for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j] * 299 + d[j+1] * 587 + d[j+2] * 114) / 1000;
     const r = analyzeGray(gray, cv.width, cv.height);
+    if (r.grid && r.cells.length) {
+      try { // متن کد زیر هر QR از لایهٔ متن PDF؛ اگر نبود/خطا داد، از تصویر کپشن استفاده می‌شود
+        const tc = await page.getTextContent(), its = [];
+        for (const it of tc.items) { const s = (it.str || '').trim(); if (!s) continue; const t = pdfjsLib.Util.transform(v.transform, it.transform); its.push({ s, x: t[4] + (it.width || 0) * v.scale / 2, y: t[5] }); }
+        r.cells.forEach(c => {
+          const bx = c.box, m = (bx.c1 - bx.c0) * 0.15;
+          const got = its.filter(i => i.x >= bx.c0 - m && i.x <= bx.c1 + m && i.y > bx.r1 - 4 && i.y < bx.rn).sort((a, b) => a.y - b.y || a.x - b.x);
+          if (got.length) c.text = got.map(i => i.s).join(' ').slice(0, 60);
+        });
+      } catch(e){}
+    }
     if (r.grid && r.cells.length) { grids++; r.cells.forEach(c => items.push({ page: p - 1, cell: c })); }
     else items.push({ page: p - 1, cell: null });
     await sleep(0);
@@ -528,7 +580,7 @@ function tsplJob(bits, h){
 function cpclJob(bits, h){
   const enc = new TextEncoder(), parts = [];
   for (let i = 0; i < bits.length; i++) parts.push(HEXT[bits[i]]);
-  const form = $('after').value !== 'lines';
+  const form = $('after').value !== 'none'; // CPCL: FORM لیبل را به ابتدای لیبل بعدی می‌برد (در تست فیزیکی با FORM درست چاپ شد)
   const s = '! 0 200 200 ' + h + ' 1\r\nPW ' + W + '\r\nEG ' + BYTES + ' ' + h + ' 0 0 ' + parts.join('') + '\r\n' + (form ? 'FORM\r\n' : '') + 'PRINT\r\n';
   return enc.encode(s);
 }
@@ -765,9 +817,9 @@ async function pdfMode(){
   if ($('gm').value === 'page') { src.items = null; src.count = src.pdf.numPages; return src.count + ' برگ (هر صفحه = یک لیبل)'; }
   const a = await analyzePdf(src.pdf, (p, n) => { $('info').textContent = 'تحلیل صفحه ' + p + ' از ' + n + '…'; });
   src.items = a.items; src.count = a.items.length;
-  const q = a.items.filter(x => x.cell && x.cell.mods).length, fb = a.items.filter(x => x.cell && !x.cell.mods).length;
+  const q = a.items.filter(x => x.cell && x.cell.mods).length, fb = a.items.filter(x => x.cell && !x.cell.mods).length, tx = a.items.filter(x => x.cell && (x.cell.text || x.cell.cap)).length;
   let note = src.count + ' لیبل از ' + src.pdf.numPages + ' صفحه';
-  if (a.grids) note += ' (شبکه‌ی لیبل در ' + a.grids + ' صفحه' + (q ? '، ' + q + ' QR با ساختار معتبر' : '') + (fb ? '، ' + fb + ' خانه به‌صورت تصویر' : '') + ')';
+  if (a.grids) note += ' (شبکه‌ی لیبل در ' + a.grids + ' صفحه' + (q ? '، ' + q + ' QR با ساختار معتبر' : '') + (tx ? '، متن کد برای ' + tx + ' لیبل' : '') + (fb ? '، ' + fb + ' خانه به‌صورت تصویر' : '') + ')';
   else note += ' (شبکه‌ای پیدا نشد؛ هر صفحه یک لیبل)';
   return note;
 }
