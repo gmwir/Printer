@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۰</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۱ (ESC/POS)</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
 
 <div class="card">
@@ -53,15 +53,9 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 
 <div class="card">
   <h2>۳) تنظیم لیبل</h2>
-  <div class="row"><label>زبان پرینتر
-    <select id="plang" data-save>
-      <option value="tspl" selected>TSPL (پیش‌فرض؛ برچسب QR با آن روی کاغذ چاپ شد)</option>
-      <option value="cpcl">CPCL (متن هگز روی لیبل چاپ شد؛ فقط برای مقایسه)</option>
-    </select></label></div>
   <div class="row">
-    <label>عرض لیبل (mm)<input type="number" id="lw" value="51" min="10" max="120" inputmode="numeric" data-save></label>
     <label>ارتفاع لیبل (mm)<input type="number" id="lh" value="34" min="10" max="120" inputmode="numeric" data-save></label>
-    <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="4" min="0" max="25" inputmode="numeric" data-save></label>
+    <label>فید بعد از هر لیبل (نقطه؛ ۸ نقطه = ۱ mm؛ ESC J)<input type="number" id="feed" value="32" min="0" max="255" inputmode="numeric" data-save></label>
   </div>
   <div class="row"><label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="16" min="-400" max="400" inputmode="numeric" data-save></label></div>
   <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
@@ -94,10 +88,9 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   </div>
   <div class="row"><label>بعد از قطع شدن اتصال وسط یک لیبل
     <select id="rsm" data-save>
-      <option value="page" selected>همان لیبل از اول دوباره فرستاده شود (پیش‌فرض)</option>
-      <option value="byte">از همان نقطه ادامه بدهد (ممکن است پرینتر داده را متن چاپ کند)</option>
+      <option value="byte" selected>از همان نقطه ادامه بدهد (پیش‌فرض؛ GS v 0 طول ثابت دارد و باید کامل شود)</option>
+      <option value="page">همان لیبل از اول دوباره فرستاده شود</option>
     </select></label></div>
-  <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
 </details></div>
 
 <div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
@@ -408,21 +401,18 @@ async function buildPage(i){
   return mono(applyY(cellLabel(it.cell)));
 }
 
-/* ---------- CPCL ---------- */
-const HEXT = Array.from({ length: 256 }, (_, i) => (i < 16 ? '0' : '') + i.toString(16).toUpperCase());
-function cpclJob(bits, h){
-  const parts = [];
-  for (let i = 0; i < bits.length; i++) parts.push(HEXT[bits[i]]);
-  return new TextEncoder().encode('! 0 200 200 ' + h + ' 1\r\nPW ' + W + '\r\nEG ' + BYTES + ' ' + h + ' 0 0 ' + parts.join('') + '\r\nFORM\r\nPRINT\r\n');
-}
-
+/* ---------- ESC/POS raster (GS v 0) ---------- */
 function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
-function tsplJob(bits, h){
-  const lw = Math.max(10, +$('lw').value || 51), gap = Math.max(0, +$('gapmm').value || 0), data = $('inv').checked ? bits.map(b => b ^ 0xFF) : bits;
-  const head = 'SIZE ' + lw + ' mm,' + LH() + ' mm\r\nGAP ' + gap + ' mm,0 mm\r\nDIRECTION 0\r\nCLS\r\nBITMAP 0,0,' + BYTES + ',' + h + ',0,', enc = new TextEncoder();
-  return concat([enc.encode(head), data, enc.encode('\r\nPRINT 1,1\r\n')]);
+function jobBytes(bits, h){
+  if (bits.length !== BYTES * h) throw new Error('اندازه‌ی بیت‌مپ نادرست: ' + bits.length);
+  const fd = Math.max(0, Math.min(255, +$('feed').value || 0));
+  return concat([
+    new Uint8Array([0x1B, 0x40]),                                                            // ESC @
+    new Uint8Array([0x1D, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, h & 255, h >> 8]),      // GS v 0 m=0 xL xH yL yH
+    bits,                                                                                    // 1 = سیاه
+    new Uint8Array(fd ? [0x1B, 0x4A, fd] : [])                                               // ESC J n
+  ]);
 }
-const jobBytes = (bits, h) => $('plang').value === 'cpcl' ? cpclJob(bits, h) : tsplJob(bits, h);
 /* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
 const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
 const userChunk = () => Math.max(10, Math.min(512, +$('chunk').value || 180)), userDelay = () => Math.max(0, +$('delay').value || 0);
@@ -611,7 +601,7 @@ function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
-const profKey = () => [device && device.name, $('plang').value, $('lw').value, $('lh').value, $('gapmm').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
+const profKey = () => [device && device.name, 'escpos', $('lh').value, $('feed').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
@@ -635,7 +625,7 @@ async function startJob(){
   Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
   const total = (to - from + 1) * copies; let done = 0, gateDone = false;
   $('prog').max = total; $('prog').value = 0;
-  log('پیش‌بررسی: ' + $('plang').value.toUpperCase() + ' • CH1 • ارسال تأییدی • لیبل ' + $('lw').value + '×' + LH() + ' mm، GAP ' + $('gapmm').value + ' • بسته ' + userChunk() + ' بایت، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • بعد از قطع: ' + $('rsm').value + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
+  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 • CH1 • ارسال تأییدی • ارتفاع لیبل ' + LH() + ' mm، فید ' + $('feed').value + ' • بسته ' + userChunk() + ' بایت، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • بعد از قطع: ' + $('rsm').value + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
