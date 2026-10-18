@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۹</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۰</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
 
 <div class="card">
@@ -53,10 +53,17 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 
 <div class="card">
   <h2>۳) تنظیم لیبل</h2>
+  <div class="row"><label>زبان پرینتر
+    <select id="plang" data-save>
+      <option value="tspl" selected>TSPL (پیش‌فرض؛ برچسب QR با آن روی کاغذ چاپ شد)</option>
+      <option value="cpcl">CPCL (متن هگز روی لیبل چاپ شد؛ فقط برای مقایسه)</option>
+    </select></label></div>
   <div class="row">
+    <label>عرض لیبل (mm)<input type="number" id="lw" value="51" min="10" max="120" inputmode="numeric" data-save></label>
     <label>ارتفاع لیبل (mm)<input type="number" id="lh" value="34" min="10" max="120" inputmode="numeric" data-save></label>
-    <label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="16" min="-400" max="400" inputmode="numeric" data-save></label>
+    <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="4" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
+  <div class="row"><label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="16" min="-400" max="400" inputmode="numeric" data-save></label></div>
   <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
 </div>
 
@@ -78,6 +85,20 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <button class="p" id="bRe" hidden style="width:100%;margin-top:8px">اتصال دوباره و ادامه‌ی چاپ</button>
   <p style="font-size:13px;color:var(--mut);margin:8px 0 0">هنگام چاپ، Bluefy را باز و صفحه را روشن نگه دار.</p>
 </div>
+
+<div class="card"><details><summary>تنظیمات پیشرفته (ارسال)</summary>
+  <div class="row">
+    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="180" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>مکث بین لیبل‌ها (ثانیه)<input type="number" id="lpause" value="2" min="0" max="30" inputmode="numeric" data-save></label>
+  </div>
+  <div class="row"><label>بعد از قطع شدن اتصال وسط یک لیبل
+    <select id="rsm" data-save>
+      <option value="page" selected>همان لیبل از اول دوباره فرستاده شود (پیش‌فرض)</option>
+      <option value="byte">از همان نقطه ادامه بدهد (ممکن است پرینتر داده را متن چاپ کند)</option>
+    </select></label></div>
+  <label class="chk"><input type="checkbox" id="inv" data-save checked> TSPL: بیت ۰ = سیاه (اگر رنگ‌ها برعکس چاپ شد، تیک را بردار)</label>
+</details></div>
 
 <div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
   <textarea id="log" readonly></textarea>
@@ -387,7 +408,7 @@ async function buildPage(i){
   return mono(applyY(cellLabel(it.cell)));
 }
 
-/* ---------- CPCL (تنها زبان؛ روی کاغذ تأیید شده) ---------- */
+/* ---------- CPCL ---------- */
 const HEXT = Array.from({ length: 256 }, (_, i) => (i < 16 ? '0' : '') + i.toString(16).toUpperCase());
 function cpclJob(bits, h){
   const parts = [];
@@ -395,8 +416,16 @@ function cpclJob(bits, h){
   return new TextEncoder().encode('! 0 200 200 ' + h + ' 1\r\nPW ' + W + '\r\nEG ' + BYTES + ' ' + h + ' 0 0 ' + parts.join('') + '\r\nFORM\r\nPRINT\r\n');
 }
 
+function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
+function tsplJob(bits, h){
+  const lw = Math.max(10, +$('lw').value || 51), gap = Math.max(0, +$('gapmm').value || 0), data = $('inv').checked ? bits.map(b => b ^ 0xFF) : bits;
+  const head = 'SIZE ' + lw + ' mm,' + LH() + ' mm\r\nGAP ' + gap + ' mm,0 mm\r\nDIRECTION 0\r\nCLS\r\nBITMAP 0,0,' + BYTES + ',' + h + ',0,', enc = new TextEncoder();
+  return concat([enc.encode(head), data, enc.encode('\r\nPRINT 1,1\r\n')]);
+}
+const jobBytes = (bits, h) => $('plang').value === 'cpcl' ? cpclJob(bits, h) : tsplJob(bits, h);
 /* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
-const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb', CHUNK = 180;
+const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
+const userChunk = () => Math.max(10, Math.min(512, +$('chunk').value || 180)), userDelay = () => Math.max(0, +$('delay').value || 0);
 let device = null, chr = null, tConn = 0, curChunk = 0;
 const job = { running: false, paused: false, stop: false };
 async function openChar(){
@@ -434,10 +463,10 @@ const PS = { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: 0, label
 const fmtT = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), ms))]);
 function big(t, cls){ const e = $('ptxt'); e.textContent = t; e.className = 'pill big' + (cls ? ' ' + cls : ''); }
-function whereTxt(){ return PS.label ? ' — بعد از اتصال از ' + PS.label + ' (همان نقطه، بدون تکرار) ادامه می‌دهد' : ''; }
+function whereTxt(){ return PS.label ? ' — بعد از اتصال از ' + PS.label + (($('rsm').value === 'byte') ? ' (همان نقطه، بدون تکرار)' : ' (همان لیبل از اول)') + ' ادامه می‌دهد' : ''; }
 function statsLine(){
   const sec = PS.t0 ? (Date.now() - PS.t0) / 1000 : 0, sp = sec > 1 ? (PS.bytes / 1024 / sec).toFixed(1) : '—';
-  $('stats').textContent = 'قطع‌شدن: ' + PS.disc + ' • اتصال مجدد موفق: ' + PS.rec + ' • بسته: ' + (curChunk || CHUNK) + ' بایت • سرعت: ' + sp + ' KB/s • زمان: ' + fmtT(sec);
+  $('stats').textContent = 'قطع‌شدن: ' + PS.disc + ' • اتصال مجدد موفق: ' + PS.rec + ' • بسته: ' + (curChunk || userChunk()) + ' بایت • سرعت: ' + sp + ' KB/s • زمان: ' + fmtT(sec);
 }
 async function ensureConnected(ctx){
   if (isUp()) return;
@@ -477,13 +506,14 @@ async function sendAll(data, st, meta){
   let tick = Date.now() + (meta && meta.hold ? 1500 : 0);
   while (st.off < data.length) {
     await gate();
-    const end = Math.min(data.length, st.off + (curChunk || CHUNK));
+    const end = Math.min(data.length, st.off + (curChunk || userChunk()));
     await write(data.slice(st.off, end));
     PS.bytes += end - st.off; st.off = end;
     if (meta && Date.now() > tick) {
       tick = Date.now() + 300;
       big('🖨 در حال ارسال — ' + meta.label + ' (' + Math.floor(st.off * 100 / data.length) + '٪)', 'run'); statsLine();
     }
+    const dl = userDelay(); if (dl) await sleep(dl);
   }
 }
 async function printUnit(data, meta){
@@ -492,7 +522,7 @@ async function printUnit(data, meta){
     att++;
     try {
       await ensureConnected(meta);
-      if (att > 1 && meta) { big('✓ دوباره وصل شد — ادامه‌ی ارسال ' + meta.label + ' (همان نقطه، بدون تکرار)', 'ok'); meta.hold = true; }
+      if (att > 1 && meta) { big('✓ دوباره وصل شد — ادامه‌ی ارسال ' + meta.label + ($('rsm').value === 'byte' ? ' (همان نقطه)' : ' (از اول همان لیبل)'), 'ok'); meta.hold = true; }
       await sendAll(data, st, meta);
       return;
     } catch(e){
@@ -501,9 +531,10 @@ async function printUnit(data, meta){
       if (fails >= 40) throw e;
       if (meta && st.off > 0) PS.susp.add(meta.label);
       log('خطای ارسال (تلاش ' + att + ') در ' + st.off + '/' + data.length + ': ' + errText(e));
+      if ($('rsm').value !== 'byte') st.off = 0;
       if (st.off > (st.max || 0)) { st.max = st.off; st.stall = 0; } else st.stall = (st.stall || 0) + 1;
       if (st.stall >= 3) {
-        const base = curChunk || CHUNK;
+        const base = curChunk || userChunk();
         if (base > 20) { curChunk = Math.max(20, Math.floor(base / 2)); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
         st.stall = 0;
       }
@@ -580,7 +611,7 @@ function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
-const profKey = () => [device && device.name, $('lh').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
+const profKey = () => [device && device.name, $('plang').value, $('lw').value, $('lh').value, $('gapmm').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
@@ -604,8 +635,8 @@ async function startJob(){
   Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
   const total = (to - from + 1) * copies; let done = 0, gateDone = false;
   $('prog').max = total; $('prog').value = 0;
-  log('پیش‌بررسی: CPCL • CH1 • ارسال تأییدی • ارتفاع لیبل ' + LH() + ' mm (' + LH() * 8 + ' نقطه) • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
-  const prep = async p => { const { bits, h } = await buildPage(p - 1); return cpclJob(bits, h); };
+  log('پیش‌بررسی: ' + $('plang').value.toUpperCase() + ' • CH1 • ارسال تأییدی • لیبل ' + $('lw').value + '×' + LH() + ' mm، GAP ' + $('gapmm').value + ' • بسته ' + userChunk() + ' بایت، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • بعد از قطع: ' + $('rsm').value + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
+  const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
     if (!isUp()) await connect();
@@ -630,6 +661,7 @@ async function startJob(){
           if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف (هدررفت لیبل نداشته باش)')) { job.stop = true; throw STOP; }
           markOk(); log('هم‌ترازی تأیید شد: ' + profKey());
         }
+        { const ps = Math.max(0, +$('lpause').value || 0); for (let t = 0; t < ps * 1000; t += 200) { await gate(); await sleep(200); } }
       }
     }
     LS.set('pt260p:' + src.sig, '0');
