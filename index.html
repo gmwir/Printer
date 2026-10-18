@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۶</small></h1>
+<h1>🖨️ چاپ دسته‌ای PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۲۷</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن (Safari پشتیبانی نمی‌کند).</div>
 
 <div class="card">
@@ -133,6 +133,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     <label>ارتفاع لیبل (mm؛ برای شبکه/CSV اگر ۰ باشد ۳۰ در نظر گرفته می‌شود)<input type="number" id="lh" value="30" min="0" max="300" inputmode="numeric" data-save></label>
     <label>روش چاپ QR<select id="qrm" data-save><option value="bmp">تصویر (کند؛ تست‌شده)</option><option value="native">فرمان بومی QR پرینتر (سریع؛ فقط بعد از موفق شدن تست ۹)</option></select></label>
     <label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="0" min="-400" max="400" inputmode="numeric" data-save></label>
+    <label class="chk"><input type="checkbox" id="probe" data-save> کاوشگر اتصال: قبل از هر لیبل ۲ بایت CRLF بفرست (پیش‌فرض خاموش؛ روشن بودنش ممکن است پرینتر را در حالت متن بیندازد)</label>
     <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR روی لیبل چاپ شود</label>
     <label>فاصله‌ی لیبل‌ها GAP (mm)<input type="number" id="gapmm" value="3" min="0" max="25" inputmode="numeric" data-save></label>
   </div>
@@ -802,7 +803,7 @@ async function printUnit(data, idx, meta){
     try {
       await ensureConnected(idx, meta);
       // کاوشگر سلامت اتصال پیش از داده‌ی لیبل: اگر لینک مرده باشد خطا روی همین ۲ بایت می‌آید، نه روی بستهٔ اول لیبل (جلوگیری از ارسال نیمه‌کاره/تکراری)
-      if (st.off === 0) await write(lang === 'escpos' ? new Uint8Array([0x1b, 0x40]) : new Uint8Array([13, 10]), 0);
+      if (st.off === 0 && $('probe').checked) await write(lang === 'escpos' ? new Uint8Array([0x1b, 0x40]) : new Uint8Array([13, 10]), 0);
       if (att > 1) {
         if (meta) { big('✓ دوباره وصل شد — ادامه‌ی چاپ از ' + meta.label + ($('resume').value === 'byte' ? ' (همان نقطه، بدون تکرار)' : ' (ابتدای برگ)'), 'ok'); meta.hold = true; }
       }
@@ -931,6 +932,7 @@ async function startJob(){
   let from = Math.max(1, +$('from').value || 1); const to = Math.min(src.count, +$('to').value || src.count);
   const copies = Math.max(1, +$('copies').value || 1);
   if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
+  if ($('rot180').checked && !confirm('گزینهٔ «چرخاندن ۱۸۰°» روشن است و لیبل‌ها وارونه چاپ می‌شوند (جهت جابه‌جایی عمودی هم برعکس می‌شود).\n\nتأیید = همین‌طور ادامه بده\nانصراف = توقف؛ تیک «چرخاندن ۱۸۰°» را در «۲) فایل» بردار')) { big('متوقف شد: «چرخاندن ۱۸۰°» را خاموش کن', 'warn'); return; }
   // جلوگیری از چاپ تکراری: برگ‌هایی از همین فایل که قبلاً در همین نشست فرستاده شده‌اند
   if (LAST.sig === src.sig && LAST.p >= from) {
     if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
@@ -948,7 +950,7 @@ async function startJob(){
   $('prog').max = total; $('prog').value = 0;
   let gateDone = false;
   PS.ver = 0; PS.susp = new Set(); PS.dropL = [];
-  log('پیش‌بررسی: زبان ' + $('lang').value + ' • کانال ' + CANDS[chIdx].n + ' • ارسال ' + (($('resume').value === 'byte' || $('wmode').value === 'resp') ? 'تأییدی(resp)' : $('wmode').value) + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • ادامه ' + $('resume').value + ' • فید ' + $('after').value + ' • تأیید پرینتر ' + (verifyOn() ? 'روشن' : 'خاموش'));
+  log('پیش‌بررسی: زبان ' + $('lang').value + ' • کانال ' + CANDS[chIdx].n + ' • ارسال ' + (($('resume').value === 'byte' || $('wmode').value === 'resp') ? 'تأییدی(resp)' : $('wmode').value) + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • ادامه ' + $('resume').value + ' • فید ' + $('after').value + ' • تأیید پرینتر ' + (verifyOn() ? 'روشن' : 'خاموش') + ' • چرخش۱۸۰ ' + ($('rot180').checked ? 'روشن' : 'خاموش') + ' • کاوشگر ' + ($('probe').checked ? 'روشن' : 'خاموش'));
   let natFb = 0, natOk = 0;
   const prep = async p => {
     const it = src.items && src.items[p - 1];
