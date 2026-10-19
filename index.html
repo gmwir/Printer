@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۴ (ESC/POS نواری)</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۵ (ESC/POS نواری + حسگر لیبل)</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
 
 <div class="card">
@@ -67,6 +67,18 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm؛ فقط به جلو)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
     <button type="button" id="bMFeed">فید دستی کاغذ</button>
   </div>
+  <div class="row"><label>رفتن به لیبل بعدی (بعد از هر لیبل)
+    <select id="lend" data-save>
+      <option value="escj" selected>فید ثابت با «گام لیبل» (بدون حسگر)</option>
+      <option value="gsff">حسگر پرینتر: GS FF</option>
+      <option value="ff">حسگر پرینتر: FF</option>
+    </select></label></div>
+  <label class="chk"><input type="checkbox" id="align0" data-save checked> با حسگر: قبل از شروع چاپ، اول کاغذ به ابتدای لیبل برود</label>
+  <div class="row">
+    <button type="button" id="bGsff">آزمایش حسگر: GS FF</button>
+    <button type="button" id="bFf">آزمایش حسگر: FF</button>
+  </div>
+  <p style="font-size:12px;color:var(--mut);margin:0">آزمایش حسگر فقط ۱–۲ بایت می‌فرستد (بدون تصویر). کاغذ را وسط یک لیبل بگذار و دکمه را بزن: اگر کاغذ دقیقاً سر فاصله‌ی بین دو لیبل ایستاد، همان گزینه را در «رفتن به لیبل بعدی» انتخاب کن.</p>
   <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
 </div>
 
@@ -429,9 +441,14 @@ function jobFrames(bits, h, n){
   const r = bandRows(), fd = trailFeed(n, h), fr = [];
   for (let y = 0; y < h; y += r) fr.push(band(bits, y, Math.min(r, h - y)));
   fr[0] = concat([new Uint8Array([0x1B, 0x40]), fr[0]]);                                    // ESC @ فقط اول لیبل
-  if (fd) fr.push(new Uint8Array([0x1B, 0x4A, fd]));                                         // ESC J n
+  const se = sensorCmd();
+  if (se) fr.push(se);                                                                       // حسگر: رفتن به ابتدای لیبل بعدی
+  else if (fd) fr.push(new Uint8Array([0x1B, 0x4A, fd]));                                    // ESC J n
   return fr;
 }
+// حسگر فاصله‌ی لیبل پرینتر: GS FF یا FF (هر کدام یک فریم کامل ۱–۲ بایتی؛ بدون خطر خراب شدن تصویر)
+const SENSOR = { gsff: [0x1D, 0x0C], ff: [0x0C] };
+const sensorCmd = m => { const c = SENSOR[m || $('lend').value]; return c ? new Uint8Array(c) : null; };
 const feedFrames = n => { const fr = []; while (n > 0) { const k = Math.min(255, n); fr.push(new Uint8Array([0x1B, 0x4A, k])); n -= k; } return fr; };
 /* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
 const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
@@ -638,10 +655,10 @@ $('file').addEventListener('change', async e => {
 /* ---------- صف چاپ ---------- */
 function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
-  $('bConn').disabled = run; $('bMFeed').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
+  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bGsff').disabled = run; $('bFf').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
-const profKey = () => [device && device.name, 'escpos', $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
+const profKey = () => [device && device.name, 'escpos', $('lend').value, $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
@@ -665,13 +682,18 @@ async function startJob(){
   Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
   const total = (to - from + 1) * copies; let done = 0, gateDone = false;
   $('prog').max = total; $('prog').value = 0;
-  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 نواری • CH1 • ارسال تأییدی • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm (' + LHD() + ' نقطه)، اتصال تازه ≤ ' + ($('fresh').value || 0) + ' s • نواری: ' + bandRows() + ' ردیف در هر بسته، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
+  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 نواری • CH1 • ارسال تأییدی • رفتن به لیبل بعدی: ' + $('lend').value + ($('lend').value !== 'escj' ? ($('align0').checked ? ' + هم‌ترازی شروع' : '') : '') + ' • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm (' + LHD() + ' نقطه)، اتصال تازه ≤ ' + ($('fresh').value || 0) + ' s • نواری: ' + bandRows() + ' ردیف در هر بسته، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobFrames(bits, h, p); };
   let curP = from;                                              // برگی که در حال ارسال است (برای ادامهٔ بدون تکرار)
   try {
     big('در حال اتصال به پرینتر…', 'warn');
     if (!isUp()) await connect();
     await wakeOn();
+    if (sensorCmd() && $('align0').checked) {                    // کاغذ هر جا ایستاده باشد، اول به ابتدای لیبل برود
+      big('هم‌ترازی: رفتن به ابتدای لیبل…', 'run');
+      await printUnit([sensorCmd()], { label: 'هم‌ترازی شروع', manual: true });
+      log('هم‌ترازی شروع با حسگر (' + $('lend').value + ') فرستاده شد'); await sleep(1500);
+    }
     let nxt = prep(from); nxt.catch(() => {});
     for (let p = from; p <= to; p++) {
       curP = p;
@@ -730,6 +752,15 @@ $('bMFeed').onclick = async () => {
   catch (e) { log('فید دستی ناموفق: ' + errText(e)); big('فید دستی انجام نشد: ' + errText(e), 'bad'); }
   finally { $('bMFeed').disabled = job.running; }
 };
+async function sensorTest(m, btn){                             // فقط ۱–۲ بایت؛ برای دیدن اینکه پرینتر سر فاصله‌ی لیبل می‌ایستد یا نه
+  if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
+  job.stop = false; job.paused = false; btn.disabled = true;
+  try { if (!isUp()) await connect(); await printUnit([sensorCmd(m)], { label: 'آزمایش حسگر', manual: true }); log('آزمایش حسگر ' + m + ' فرستاده شد — ببین کاغذ دقیقاً سر فاصله‌ی دو لیبل ایستاد یا نه'); big('آزمایش حسگر ' + m.toUpperCase() + ' فرستاده شد — جای کاغذ را نگاه کن', 'ok'); }
+  catch(e){ log('آزمایش حسگر ' + m + ' ناموفق: ' + errText(e)); big('آزمایش حسگر انجام نشد: ' + errText(e), 'bad'); }
+  finally { btn.disabled = job.running; }
+}
+$('bGsff').onclick = () => sensorTest('gsff', $('bGsff'));
+$('bFf').onclick = () => sensorTest('ff', $('bFf'));
 $('bRe').onclick = async () => { try { await connect(true); $('bRe').hidden = true; } catch(e){ log('اتصال دوباره: ' + errText(e)); } };
 $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('log').value); } catch(e){ $('log').select(); } };
 </script>
