@@ -52,12 +52,11 @@ function parse(rx){
   return { rows, labels, garbage, feeds, sensor };
 }
 
-async function page(mode, K, lend){
+async function page(mode, K){
   const br = await chromium.launch({ executablePath: EXE }), pg = await br.newPage(), errs = [];
   pg.on('pageerror', e => errs.push(e.message)); pg.on('dialog', d => d.accept());
   await pg.addInitScript(mock(mode, K)); await pg.goto('file://' + APP);
-  await pg.evaluate(m => { const l = document.getElementById('lpause'); l.value = '0'; l.dispatchEvent(new Event('change'));
-    const e = document.getElementById('lend'); e.value = m; e.dispatchEvent(new Event('change')); }, lend || 'escj');
+  await pg.evaluate(() => { const l = document.getElementById('lpause'); l.value = '0'; l.dispatchEvent(new Event('change')); });
   await pg.setInputFiles('#file', CSV);
   await pg.waitForFunction(() => /CSV/.test(document.getElementById('info').textContent));
   return { br, pg, errs };
@@ -69,29 +68,22 @@ let failed = 0;
 const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (info ? '  [' + info + ']' : '')); if (!ok) failed++; };
 
 (async () => {
-  const H = 276, FEED = 39 * 8 - H;                     // defaults: label 34.5 mm = 276 dots, pitch 39 mm
+  // defaults: label 34.5 mm = 276 dots, pitch 39 mm = 312 dots, print head to tear edge 10 mm = 80 dots.
+  // All paper movement is blank raster rows: start alignment S, 36 blank rows after each label,
+  // first-label check (eject D, realign S), end eject D.
+  const H = 276, P = 312, D = 80, S = P - D % P, TOTAL = S + 5 * P + D + S + D;
   for (const [mode, K] of [['ok', -1], ['drop', 40], ['dupe', 40], ['lose', 40], ['lose', 92], ['lose', 93]]) {
     const { br, pg, errs } = await page(mode, K);
     await pg.click('#bStart'); await idle(pg);
     const { rx, sizes, starts } = await state(pg), r = parse(rx);
-    const tag = mode + '@' + K, info = `labels=${r.labels} rows=${r.rows}/${5 * H} garbage=${r.garbage} feeds=${r.feeds.length}`;
+    const tag = mode + '@' + K, info = `labels=${r.labels} rows=${r.rows}/${TOTAL} garbage=${r.garbage} feedCmds=${r.feeds.length + r.sensor}`;
     check(tag + ': no page errors', errs.length === 0, errs.join('; '));
     check(tag + ': every Bluetooth write <= 182 bytes', Math.max(...sizes) <= 182, 'max ' + Math.max(...sizes));
     check(tag + ': every write starts with a command', starts.every(s => (s[0] === 0x1B && (s[1] === 0x40 || s[1] === 0x4A)) || (s[0] === 0x1D && (s[1] === 0x0C || (s[1] === 0x76 && s[2] === 0x30))) || s[0] === 0x0C));
-    if (mode === 'ok' || mode === 'drop') check(tag + ': exact output', r.labels === 5 && r.rows === 5 * H && r.garbage === 0 && r.feeds.length === 5 && r.feeds.every(f => f === FEED), info);
-    if (mode === 'dupe') check(tag + ': no garbage, at most one repeated band', r.labels === 5 && r.garbage === 0 && r.rows - 5 * H >= 0 && r.rows - 5 * H <= 3, info);
-    if (mode === 'lose') check(tag + ': damage limited to one band (<= 160 garbage bytes, no label lost)', r.garbage <= 160 && r.labels >= 4 && r.rows >= 5 * H - 9, info);
-    await br.close();
-  }
-  for (const [lend, cmd] of [['gsff', [0x1D, 0x0C]], ['ff', [0x0C]]]) { // gap-sensor mode: align once, then sensor feed after every label
-    const { br, pg, errs } = await page('ok', -1, lend);
-    await pg.click('#bStart'); await idle(pg);
-    const r = parse((await state(pg)).rx);
-    check(lend + ' mode: 1 start alignment + 1 sensor feed per label, no fixed feed, exact image', errs.length === 0 && r.sensor === 6 && r.feeds.length === 0 && r.labels === 5 && r.rows === 5 * H && r.garbage === 0, `sensor=${r.sensor} feeds=${r.feeds.length} rows=${r.rows} garbage=${r.garbage}`);
-    const before = (await state(pg)).rx.length;
-    await pg.click(lend === 'gsff' ? '#bGsff' : '#bFf'); await pg.waitForFunction(id => !document.getElementById(id).disabled, lend === 'gsff' ? 'bGsff' : 'bFf', { timeout: 30000 });
-    const sent = (await state(pg)).rx.slice(before);
-    check(lend + ' test button sends only the sensor command', JSON.stringify(sent) === JSON.stringify(cmd), JSON.stringify(sent));
+    check(tag + ': no standalone feed commands (ESC J / FF / GS FF)', r.feeds.length === 0 && r.sensor === 0, info);
+    if (mode === 'ok' || mode === 'drop') check(tag + ': exact output (paper moved only by blank rows)', r.labels === 5 && r.rows === TOTAL && r.garbage === 0, info);
+    if (mode === 'dupe') check(tag + ': no garbage, at most one repeated band', r.labels === 5 && r.garbage === 0 && r.rows - TOTAL >= 0 && r.rows - TOTAL <= 3, info);
+    if (mode === 'lose') check(tag + ': damage limited to one band (<= 160 garbage bytes)', r.garbage <= 160 && r.labels >= 4 && r.rows >= TOTAL - 9, info);
     await br.close();
   }
   { // Cancel, then manual feed must still work
@@ -100,11 +92,12 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const before = (await state(pg)).rx.length;
     await pg.click('#bMFeed'); await pg.waitForFunction(() => !document.getElementById('bMFeed').disabled, null, { timeout: 30000 });
     const fed = (await state(pg)).rx.slice(before);
-    check('manual feed after cancel sends ESC J 64', fed.length === 3 && fed[0] === 0x1B && fed[1] === 0x4A && fed[2] === 64, 'bytes=' + fed.length);
+    const fr = parse(fed);
+    check('manual feed after cancel sends 64 blank rows', fr.rows === 64 && fr.garbage === 0 && fr.feeds.length === 0, 'rows=' + fr.rows + ' bytes=' + fed.length);
     await br.close();
   }
-  { // Link dies during label 3 and never returns: user cancels; next start must resume at label 3, not repeat 1-2
-    const { br, pg } = await page('dead', 2 * 94 + 10);
+  { // Link dies during label 3 (write 400: align 78 + label 104 + check 27+78 + label 104 frames before it) and never returns: user cancels; next start must resume at label 3, not repeat 1-2
+    const { br, pg } = await page('dead', 400);
     await pg.click('#bStart');
     await pg.waitForFunction(() => /اتصال مجدد، تلاش 2/.test(document.getElementById('ptxt').textContent), null, { timeout: 60000 });
     await pg.click('#bStop'); await idle(pg);
