@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۲ (ESC/POS)</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۳ (ESC/POS)</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
 
 <div class="card">
@@ -90,19 +90,14 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 
 <div class="card"><details><summary>تنظیمات پیشرفته (ارسال)</summary>
   <div class="row">
-    <label>اندازه‌ی بسته (بایت)<input type="number" id="chunk" value="180" min="10" max="512" inputmode="numeric" data-save></label>
+    <label>اندازه‌ی بسته (بایت؛ مضرب ۴۸: ۴۸ تا ۱۹۲)<input type="number" id="pk" value="96" min="48" max="192" step="48" inputmode="numeric" data-save></label>
     <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
     <label>مکث بین لیبل‌ها (ثانیه)<input type="number" id="lpause" value="2" min="0" max="30" inputmode="numeric" data-save></label>
   </div>
-  <div class="row"><label>پایان هر لیبل
-    <select id="fend" data-save>
-      <option value="escj" selected>فید ثابت با گام لیبل (ESC J) — پیش‌فرض</option>
-      <option value="ff">آزمایشی: رفتن به لیبل بعدی با سنسور (FF)</option>
-      <option value="gsff">آزمایشی: رفتن به لیبل بعدی با سنسور (GS FF)</option>
-    </select></label></div>
+  <div class="row"><label>حداکثر عمر اتصال قبل از ارسال هر لیبل (ثانیه؛ بیشتر از آن قبل از لیبل، اتصال تازه گرفته می‌شود؛ ۰ = خاموش)<input type="number" id="fresh" value="1" min="0" max="30" step="0.1" inputmode="decimal" data-save></label></div>
   <div class="row"><label>بعد از قطع شدن اتصال وسط یک لیبل
     <select id="rsm" data-save>
-      <option value="byte" selected>از همان نقطه ادامه بدهد (پیش‌فرض؛ GS v 0 طول ثابت دارد و باید کامل شود)</option>
+      <option value="byte" selected>از همان نقطه ادامه بدهد (پیش‌فرض؛ بدون حیف شدن لیبل)</option>
       <option value="page">همان لیبل از اول دوباره فرستاده شود</option>
     </select></label></div>
 </details></div>
@@ -421,19 +416,21 @@ function trailFeed(n, h){                                      // فید بعد 
   const pd = Math.max(10, +$('pitch').value || 44) * 8;
   return Math.max(0, Math.min(255, Math.round(n * pd) - Math.round((n - 1) * pd) - h));
 }
-function jobBytes(bits, h, n){
-  if (bits.length !== BYTES * h) throw new Error('اندازه‌ی بیت‌مپ نادرست: ' + bits.length);
-  const m = $('fend').value, fd = trailFeed(n, h);
+const PADROWS = 4;                                              // ۴ ردیف خالی ته بیت‌مپ: اگر یک بسته (حداکثر ۱۹۲ بایت = ۴ ردیف) دوبار برسد، تصویر خراب نمی‌شود
+function jobBytes(bits, h0, n){
+  if (bits.length !== BYTES * h0) throw new Error('اندازه‌ی بیت‌مپ نادرست: ' + bits.length);
+  const h = h0 + PADROWS, fd = trailFeed(n, h);
   return concat([
     new Uint8Array([0x1B, 0x40]),                                                            // ESC @
     new Uint8Array([0x1D, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, h & 255, h >> 8]),      // GS v 0 m=0 xL xH yL yH
     bits,                                                                                    // 1 = سیاه
-    new Uint8Array(m === 'ff' ? [0x0C] : m === 'gsff' ? [0x1D, 0x0C] : (fd ? [0x1B, 0x4A, fd] : []))
+    new Uint8Array(BYTES * PADROWS),                                                         // ردیف‌های خالی
+    new Uint8Array(fd ? [0x1B, 0x4A, fd] : [])                                               // ESC J n
   ]);
 }
 /* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
 const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
-const userChunk = () => Math.max(10, Math.min(512, +$('chunk').value || 180)), userDelay = () => Math.max(0, +$('delay').value || 0);
+const userChunk = () => Math.max(48, Math.min(192, Math.floor((+$('pk').value || 144) / 48) * 48)), userDelay = () => Math.max(0, +$('delay').value || 0);
 let device = null, chr = null, tConn = 0, curChunk = 0;
 const job = { running: false, paused: false, stop: false };
 async function openChar(){
@@ -448,6 +445,7 @@ function attach(d){
   if (d._pt) return; d._pt = 1;
   d.addEventListener('gattserverdisconnected', () => {
     chr = null;
+    if (PS.planned) { PS.planned = false; log('قطع برنامه‌ریزی‌شده برای اتصال تازه — عمر اتصال ' + ((Date.now() - tConn) / 1000).toFixed(1) + ' ثانیه'); if (PS.onPlanned) PS.onPlanned(); return; }
     if (job.running) { PS.disc++; setStatus('قطع شد — اتصال خودکار', false); if (!job.paused) big('⚠ اتصال قطع شد — در حال اتصال مجدد…' + whereTxt(), 'warn'); statsLine(); }
     else setStatus('قطع شد (هنگام چاپ خودکار وصل می‌شود)', false);
     log('اتصال قطع شد — عمر اتصال ' + ((Date.now() - tConn) / 1000).toFixed(1) + ' ثانیه' + (job.running ? ' (شماره ' + PS.disc + ')' : ''));
@@ -467,7 +465,7 @@ async function connect(force){
 const isUp = () => !!(device && device.gatt.connected && chr);
 
 /* ---------- وضعیت و ارسال ---------- */
-const PS = { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: 0, label: '' };
+const PS = { planned: false, susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: 0, label: '' };
 const fmtT = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), ms))]);
 function big(t, cls){ const e = $('ptxt'); e.textContent = t; e.className = 'pill big' + (cls ? ' ' + cls : ''); }
@@ -499,12 +497,22 @@ async function ensureConnected(ctx){
     }
   }
   $('bRe').hidden = true;
-  if (ctx) { PS.rec++; log('دوباره وصل شد بعد از ' + n + ' تلاش'); }
+  if (ctx && !ctx.planned) { PS.rec++; log('دوباره وصل شد بعد از ' + n + ' تلاش'); }
+  else if (ctx) log('اتصال تازه آماده شد (' + n + ' تلاش)');
 }
 async function write(chunk){ // همیشه با تأیید (write with response)؛ نسخهٔ جدا از بافر اصلی (باگ Bluefy)
   if (!chr) throw new Error('کانال قطع شد');
   const r = chr.writeValueWithResponse ? chr.writeValueWithResponse(chunk) : chr.writeValue(chunk);
   return withTimeout(r, 8000);
+}
+async function freshLink(meta){                                 // قبل از هر لیبل: اگر اتصال کهنه است، در حالت بیکار قطع و دوباره وصل شود
+  const maxAge = Math.max(0, +$('fresh').value || 0) * 1000;
+  if (!maxAge || !isUp() || Date.now() - tConn <= maxAge) return;
+  PS.planned = true; chr = null;
+  const ev = new Promise(res => { PS.onPlanned = res; setTimeout(res, 2000); });          // صبر تا رویداد قطع برسد، تا بعداً اتصال تازه را نبُرد
+  try { device.gatt.disconnect(); } catch(_){}
+  await ev; PS.planned = false; PS.onPlanned = null; await sleep(300);
+  await ensureConnected({ label: meta ? meta.label : '', planned: true });
 }
 async function gate(){
   if (job.stop) throw STOP;
@@ -529,6 +537,7 @@ async function printUnit(data, meta){
   for (;;) {
     att++;
     try {
+      if (att === 1 && meta) await freshLink(meta);
       await ensureConnected(meta);
       if (att > 1 && meta) { big('✓ دوباره وصل شد — ادامه‌ی ارسال ' + meta.label + ($('rsm').value === 'byte' ? ' (همان نقطه)' : ' (از اول همان لیبل)'), 'ok'); meta.hold = true; }
       await sendAll(data, st, meta);
@@ -543,7 +552,7 @@ async function printUnit(data, meta){
       if (st.off > (st.max || 0)) { st.max = st.off; st.stall = 0; } else st.stall = (st.stall || 0) + 1;
       if (st.stall >= 3) {
         const base = curChunk || userChunk();
-        if (base > 20) { curChunk = Math.max(20, Math.floor(base / 2)); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
+        if (base > 48) { curChunk = Math.max(48, Math.floor(base / 96) * 48); log('کاهش اندازه‌ی بسته به ' + curChunk + ' بایت'); }
         st.stall = 0;
       }
       chr = null; try { device.gatt.disconnect(); } catch(_){}
@@ -619,7 +628,7 @@ function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
-const profKey = () => [device && device.name, 'escpos', $('lh').value, $('pitch').value, $('fend').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
+const profKey = () => [device && device.name, 'escpos', $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
@@ -643,7 +652,7 @@ async function startJob(){
   Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
   const total = (to - from + 1) * copies; let done = 0, gateDone = false;
   $('prog').max = total; $('prog').value = 0;
-  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 • CH1 • ارسال تأییدی • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm، پایان: ' + $('fend').value + ' • بسته ' + userChunk() + ' بایت، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • بعد از قطع: ' + $('rsm').value + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
+  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 • CH1 • ارسال تأییدی • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm، اتصال تازه ≤ ' + $('fresh').value + ' s • بسته ' + userChunk() + ' بایت، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • بعد از قطع: ' + $('rsm').value + ' • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
   const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobBytes(bits, h, p); };
   try {
     big('در حال اتصال به پرینتر…', 'warn');
