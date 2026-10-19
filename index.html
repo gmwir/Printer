@@ -35,7 +35,7 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۶ (ESC/POS نواری، فید با ردیف سفید)</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۷ (ESC/POS نواری + آزمایش TSPL)</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
 
 <div class="card">
@@ -67,6 +67,8 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
     <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm؛ فقط به جلو)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
     <button type="button" id="bMFeed">فید دستی کاغذ</button>
   </div>
+  <div class="row"><button type="button" id="bTspl">آزمایش TSPL (یک لیبل: کادر + TEST)</button></div>
+  <p style="font-size:12px;color:var(--mut);margin:0">فقط یک لیبل کوچک به زبان TSPL می‌فرستد. اگر کادر دقیقاً روی لبه‌های یک لیبل چاپ شد، پرینتر TSPL و حسگر لیبل را بدون تغییر حالت قبول می‌کند.</p>
   <div class="row"><label>فاصله‌ی سر چاپ تا لبه‌ی برش (mm؛ یک بار کالیبره می‌شود)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
   <div class="row">
     <button type="button" id="bHdUp">شروع چاپ ۱ mm زودتر</button>
@@ -649,7 +651,7 @@ $('file').addEventListener('change', async e => {
 /* ---------- صف چاپ ---------- */
 function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
-  $('bConn').disabled = run; $('bMFeed').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
+  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bTspl').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
 const profKey = () => [device && device.name, 'escpos', $('head').value, $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
@@ -747,6 +749,21 @@ $('bMFeed').onclick = async () => {
   try { if (!isUp()) await connect(); const fr = blankFrames(n), t0 = PS.bytes; await printUnit(fr, { label: 'فید دستی', manual: true }); statsLine(); log('فید دستی ' + n + ' ردیف سفید (' + (n / 8).toFixed(1) + ' mm) در ' + fr.length + ' بسته، ' + (PS.bytes - t0) + ' بایت فرستاده شد'); big('فید دستی انجام شد', 'ok'); }
   catch (e) { log('فید دستی ناموفق: ' + errText(e)); big('فید دستی انجام نشد: ' + errText(e), 'bad'); }
   finally { $('bMFeed').disabled = job.running; }
+};
+// آزمایش TSPL: هر خط یک فرمان کامل و یک بستهٔ بلوتوث جدا؛ اندازه از تنظیمات لیبل (ارتفاع، گام)
+function tsplTestFrames(){
+  const H = LHD(), gap = Math.max(0, (+$('pitch').value || 39) - LH()), mm = v => (Math.round(v * 10) / 10) + ' mm';
+  const lines = ['SIZE 48 mm,' + mm(LH()), 'GAP ' + mm(gap) + ',0 mm', 'DIRECTION 0', 'REFERENCE 0,0', 'CLS',
+    'BOX 8,8,' + (W - 8) + ',' + (H - 8) + ',4', 'TEXT 60,' + Math.max(20, Math.round(H / 2) - 24) + ',"3",0,2,2,"TSPL TEST"', 'PRINT 1,1'];
+  log('آزمایش TSPL: ' + lines.join(' | '));
+  return lines.map(l => new TextEncoder().encode(l + '\r\n'));
+}
+$('bTspl').onclick = async () => {
+  if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
+  job.stop = false; job.paused = false; $('bTspl').disabled = true;
+  try { if (!isUp()) await connect(); await printUnit(tsplTestFrames(), { label: 'آزمایش TSPL', manual: true }); log('آزمایش TSPL فرستاده شد — ببین کادر دقیقاً روی لبه‌های یک لیبل چاپ شد یا نه'); big('آزمایش TSPL فرستاده شد — لیبل را نگاه کن', 'ok'); }
+  catch(e){ log('آزمایش TSPL ناموفق: ' + errText(e)); big('آزمایش TSPL انجام نشد: ' + errText(e), 'bad'); }
+  finally { $('bTspl').disabled = job.running; }
 };
 const nudgeHead = d => { $('head').value = Math.max(0, (+$('head').value || 0) + d); $('head').dispatchEvent(new Event('change')); log('فاصله‌ی سر چاپ تا برش = ' + $('head').value + ' mm'); };
 $('bHdUp').onclick = () => nudgeHead(1); $('bHdDn').onclick = () => nudgeHead(-1);

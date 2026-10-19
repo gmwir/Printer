@@ -86,6 +86,15 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     if (mode === 'lose') check(tag + ': damage limited to one band (<= 160 garbage bytes)', r.garbage <= 160 && r.labels >= 4 && r.rows >= TOTAL - 9, info);
     await br.close();
   }
+  { // TSPL test button: small text label, one complete command per Bluetooth write
+    const { br, pg } = await page('ok', -1);
+    await pg.click('#bTspl'); await pg.waitForFunction(() => !document.getElementById('bTspl').disabled, null, { timeout: 30000 });
+    const { rx, sizes } = await state(pg), txt = new TextDecoder().decode(new Uint8Array(rx)), lines = txt.split('\r\n').filter(Boolean);
+    check('TSPL test sends SIZE 34.5 mm, GAP 4.5 mm, BOX, TEXT, PRINT 1,1 (one line per write)',
+      lines[0] === 'SIZE 48 mm,34.5 mm' && lines[1] === 'GAP 4.5 mm,0 mm' && lines.some(l => l.startsWith('BOX ')) && lines[lines.length - 1] === 'PRINT 1,1' && sizes.length === lines.length && Math.max(...sizes) <= 182,
+      lines.join(' | '));
+    await br.close();
+  }
   { // Cancel, then manual feed must still work
     const { br, pg } = await page('ok', -1);
     await pg.click('#bStart'); await pg.waitForFunction(() => !document.getElementById('bStop').disabled); await pg.click('#bStop'); await idle(pg);
