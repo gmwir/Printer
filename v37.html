@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>چاپ دسته‌ای PT-260</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#111;--mut:#667;--pri:#0a6cff;--ok:#12805c;--bad:#c62828;--bd:#dde}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1a1d24;--tx:#eee;--mut:#99a;--pri:#4d94ff;--ok:#3ecf9a;--bad:#ff6b6b;--bd:#2b2f3a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 -apple-system,system-ui,Tahoma,sans-serif;padding:12px 12px 40px}
+h1{font-size:19px;margin:4px auto 12px;max-width:560px}
+h2{font-size:15px;margin:0 0 10px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:0 auto 12px;max-width:560px}
+.warn{background:#fff3cd;color:#664d03;border-radius:10px;padding:8px 12px;margin:0 auto 12px;max-width:560px;font-size:14px}
+button{font:inherit;min-height:46px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:0 14px}
+button.p{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+button.d{color:var(--bad)}
+button:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.row>button{flex:1 1 auto}
+label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mut);flex:1 1 90px}
+input[type=number],select{font:inherit;min-height:44px;border:1px solid var(--bd);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);width:100%}
+input[type=range]{width:100%}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--bg);font-size:13px}
+.pill.ok{color:var(--ok)}.pill.bad{color:var(--bad)}
+.pill.warn{background:#fef3c7;color:#92400e}.pill.run{background:#dbeafe;color:#1e40af}
+.pill.big{display:block;border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.7;margin:8px 0}
+progress{width:100%;height:14px}
+#pv{width:100%;max-width:384px;image-rendering:pixelated;border:1px solid var(--bd);background:#fff;display:block;margin:8px auto}
+textarea{width:100%;height:160px;font:12px/1.4 monospace;direction:ltr;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px}
+summary{cursor:pointer;color:var(--mut);padding:6px 0}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--tx);font-size:15px}
+</style>
+</head>
+<body>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۷ (ESC/POS نواری + آزمایش TSPL)</small></h1>
+<div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
+
+<div class="card">
+  <h2>۱) اتصال</h2>
+  <div class="row"><button class="p" id="bConn">اتصال به پرینتر</button></div>
+  <div class="row"><span class="pill" id="st">متصل نیست</span></div>
+</div>
+
+<div class="card">
+  <h2>۲) فایل (PDF یا CSV)</h2>
+  <input type="file" id="file" accept="application/pdf,.csv,text/csv,text/plain">
+  <div class="row"><span class="pill" id="info">فایلی انتخاب نشده</span></div>
+  <canvas id="pv" width="384" height="10"></canvas>
+</div>
+
+<div class="card">
+  <h2>۳) تنظیم لیبل</h2>
+  <div class="row">
+    <label>ارتفاع لیبل (mm)<input type="number" id="lh" value="34.5" min="10" max="120" step="0.1" inputmode="decimal" data-save></label>
+    <label>گام لیبل (mm) = از لبه‌ی بالای یک لیبل تا لبه‌ی بالای لیبل بعدی<input type="number" id="pitch" value="39" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
+  </div>
+  <p style="font-size:12px;color:var(--mut);margin:0">برای لیبل با اندازه‌ی دیگر فقط همین دو عدد را با خط‌کش عوض کن (عرض چاپ ثابت ۴۸ mm است).</p>
+  <div class="row"><label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="0" min="-400" max="400" inputmode="numeric" data-save></label></div>
+  <div class="row">
+    <button type="button" id="bUp">▲ محتوا ۱ mm بالاتر</button>
+    <button type="button" id="bDn">▼ محتوا ۱ mm پایین‌تر</button>
+  </div>
+  <div class="row">
+    <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm؛ فقط به جلو)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
+    <button type="button" id="bMFeed">فید دستی کاغذ</button>
+  </div>
+  <div class="row"><button type="button" id="bTspl">آزمایش TSPL (یک لیبل: کادر + TEST)</button></div>
+  <p style="font-size:12px;color:var(--mut);margin:0">فقط یک لیبل کوچک به زبان TSPL می‌فرستد. اگر کادر دقیقاً روی لبه‌های یک لیبل چاپ شد، پرینتر TSPL و حسگر لیبل را بدون تغییر حالت قبول می‌کند.</p>
+  <div class="row"><label>فاصله‌ی سر چاپ تا لبه‌ی برش (mm؛ یک بار کالیبره می‌شود)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
+  <div class="row">
+    <button type="button" id="bHdUp">شروع چاپ ۱ mm زودتر</button>
+    <button type="button" id="bHdDn">شروع چاپ ۱ mm دیرتر</button>
+  </div>
+  <p style="font-size:12px;color:var(--mut);margin:0">روش: لیبل‌ها را همیشه از فاصله‌ی بین دو لیبل پاره کن، بعد «شروع چاپ». برنامه خودش کاغذ را تا ابتدای لیبل بعدی جلو می‌برد و در پایان، لیبل آخر را تا لبه‌ی برش بیرون می‌دهد. اگر محتوا پایین‌تر از لیبل افتاد «زودتر»، اگر بالاتر افتاد «دیرتر» را بزن.</p>
+  <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
+</div>
+
+<div class="card">
+  <h2>۴) چاپ</h2>
+  <div class="row">
+    <label>از برگ<input type="number" id="from" value="1" min="1" inputmode="numeric"></label>
+    <label>تا برگ<input type="number" id="to" value="1" min="1" inputmode="numeric"></label>
+    <label>تعداد کپی<input type="number" id="copies" value="1" min="1" max="99" inputmode="numeric" data-save></label>
+  </div>
+  <div class="row">
+    <button class="p" id="bStart">شروع چاپ</button>
+    <button id="bPause" disabled>توقف موقت</button>
+    <button class="d" id="bStop" disabled>لغو</button>
+  </div>
+  <progress id="prog" value="0" max="1"></progress>
+  <div><span class="pill big" id="ptxt">آماده</span></div>
+  <div id="stats" style="font-size:12px;color:var(--mut);direction:rtl"></div>
+  <button class="p" id="bRe" hidden style="width:100%;margin-top:8px">اتصال دوباره و ادامه‌ی چاپ</button>
+  <p style="font-size:13px;color:var(--mut);margin:8px 0 0">هنگام چاپ، Bluefy را باز و صفحه را روشن نگه دار.</p>
+</div>
+
+<div class="card"><details><summary>تنظیمات پیشرفته (ارسال)</summary>
+  <div class="row">
+    <label>ردیف نقطه در هر بسته (۱ تا ۳؛ هر بسته یک فرمان کامل است)<input type="number" id="band" value="3" min="1" max="3" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>مکث بین لیبل‌ها (ثانیه)<input type="number" id="lpause" value="2" min="0" max="30" inputmode="numeric" data-save></label>
+  </div>
+  <div class="row"><label>حداکثر عمر اتصال قبل از ارسال هر لیبل (ثانیه؛ بیشتر از آن قبل از لیبل، اتصال تازه گرفته می‌شود؛ ۰ = خاموش، پیش‌فرض)<input type="number" id="fresh" value="0" min="0" max="30" step="0.1" inputmode="decimal" data-save></label></div>
+  <p style="font-size:12px;color:var(--mut);margin:0">بعد از قطع اتصال، ارسال از همان بسته ادامه پیدا می‌کند؛ لیبل از اول تکرار نمی‌شود.</p>
+</details></div>
+
+<div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
+  <textarea id="log" readonly></textarea>
+  <div class="row"><button id="bCopy">کپی گزارش</button></div>
+</details></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const W = 384, BYTES = W / 8;               // ۵۸ میلی‌متر، ۲۰۳dpi => ۳۸۴ نقطه
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const STOP = new Error('stop');
+
+const LS = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+function log(m){ const t = new Date().toLocaleTimeString('en-GB'); const L = $('log'); L.value += '['+t+'] '+m+'\n'; L.scrollTop = 1e9; }
+function setStatus(t, ok){ const s = $('st'); s.textContent = t; s.className = 'pill' + (ok===true?' ok':ok===false?' bad':''); }
+function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
+/* ---------- تنظیمات ذخیره‌شونده ---------- */
+const CFGV = '34', RESET34 = ['lh', 'pitch', 'yoff', 'fresh']; // نسخهٔ ۳۴: یک بار مقدارهای قدیمیِ اندازه‌گیری‌نشده کنار گذاشته می‌شوند
+const cfgOld = LS.get('pt260:cfgv') !== CFGV; LS.set('pt260:cfgv', CFGV);
+document.querySelectorAll('[data-save]').forEach(el => {
+  const k = 'pt260:' + el.id, v = cfgOld && RESET34.includes(el.id) ? null : LS.get(k);
+  if (cfgOld && RESET34.includes(el.id)) LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+  if (v !== null) { if (el.type === 'checkbox') el.checked = v === '1'; else el.value = v; }
+  el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
+});
+['yoff','lh','capt','from'].forEach(id => $(id).addEventListener('change', sched));
+if (!navigator.bluetooth) $('nobt').hidden = false;
+function pdfInit(){ try { if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e){} }
+pdfInit();
+
+/* ---------- تحلیل شبکه‌ی لیبل (خانه‌ها و QR) ---------- */
+function gRuns(proj){ const r = []; let s = -1; for (let i = 0; i < proj.length; i++) { if (proj[i] > 0) { if (s < 0) s = i; } else if (s >= 0) { r.push([s, i - 1]); s = -1; } } if (s >= 0) r.push([s, proj.length - 1]); return r; }
+function gMerge(r, dim){
+  if (r.length < 2) return r;
+  const gaps = []; for (let i = 1; i < r.length; i++) gaps.push(r[i][0] - r[i-1][1] - 1);
+  const th = Math.max(dim * 0.012, Math.max.apply(null, gaps) * 0.5);
+  const o = [r[0].slice()];
+  for (let i = 1; i < r.length; i++) { if (gaps[i-1] < th) o[o.length-1][1] = r[i][1]; else o.push(r[i].slice()); }
+  return o;
+}
+function gRegular(runs){
+  if (!runs.length) return false;
+  const ws = runs.map(r => r[1] - r[0] + 1), mean = ws.reduce((a, b) => a + b, 0) / ws.length;
+  return ws.every(x => Math.abs(x - mean) <= mean * 0.2);
+}
+function gQR(gray, w, x0, y0, bw, bh){
+  if (Math.abs(bw - bh) > Math.max(3, bw * 0.04)) return null;
+  const dk = (x, y) => gray[y * w + x] < 128;
+  let bestM = null, bestScore = -1;
+  for (let v = 1; v <= 40; v++) {
+    const N = 17 + 4 * v, sx = bw / N, sy = bh / N;
+    if (sx < 2) break;
+    const mods = new Uint8Array(N * N);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const cx = Math.min(w - 1, Math.round(x0 + (j + 0.5) * sx)), cy = Math.round(y0 + (i + 0.5) * sy);
+      mods[i * N + j] = dk(cx, cy) ? 1 : 0;
+    }
+    const fin = (r0, c0) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const edge = i === 0 || i === 6 || j === 0 || j === 6, core = i >= 2 && i <= 4 && j >= 2 && j <= 4; if (mods[(r0 + i) * N + c0 + j] !== ((edge || core) ? 1 : 0)) return false; } return true; };
+    if (!fin(0, 0) || !fin(0, N - 7) || !fin(N - 7, 0)) continue;
+    let ok = 0, tot = 0;
+    for (let k = 8; k <= N - 9; k++) { const e = (k % 2 === 0) ? 1 : 0; tot += 2; if (mods[6 * N + k] === e) ok++; if (mods[k * N + 6] === e) ok++; }
+    const score = tot ? ok / tot : 1;
+    if (score >= 0.9 && score > bestScore) { bestScore = score; bestM = { N, mods, score }; }
+  }
+  return bestM;
+}
+function analyzeGray(gray, w, h){
+  // ردیف‌های بزرگ = QR/تصویر؛ ردیف‌های کوچک = نوشتهٔ زیر QR (کپشن) که نباید شبکه را خراب کند
+  const rowP = new Uint32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) rowP[y]++;
+  const rr0 = gMerge(gRuns(rowP), h), len = r => r[1] - r[0] + 1;
+  const mxR = rr0.reduce((m, r) => Math.max(m, len(r)), 0), rr = rr0.filter(r => len(r) >= mxR * 0.4), small = rr0.filter(r => len(r) < mxR * 0.4);
+  const colP = new Uint32Array(w);
+  for (const r of rr) for (let y = r[0]; y <= r[1]; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < 110) colP[x]++;
+  const cr0 = gMerge(gRuns(colP), w), mxC = cr0.reduce((m, r) => Math.max(m, len(r)), 0), cr = cr0.filter(r => len(r) >= mxC * 0.4);
+  const grid = rr.length * cr.length >= 2 && gRegular(cr) && gRegular(rr);
+  const cells = [];
+  if (!grid) return { grid: false, cells, cols: cr.length, rows: rr.length };
+  rr.forEach((r, ri) => {
+    const rn = ri + 1 < rr.length ? rr[ri + 1][0] : h;
+    cr.forEach((c, ci) => {
+      let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+      for (let y = r[0]; y <= r[1]; y++) for (let x = c[0]; x <= c[1]; x++) if (gray[y * w + x] < 110) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return;
+      let bw = x1 - x0 + 1, bh = y1 - y0 + 1, qr = gQR(gray, w, x0, y0, bw, bh), capRows = null;
+      if (!qr && bh > bw * 1.04) { const q2 = gQR(gray, w, x0, y0, bw, bw); if (q2) { qr = q2; capRows = [y0 + bw, y1]; bh = bw; } }
+      const cell = { x0, y0, bw, bh, box: { c0: c[0], c1: c[1], r0: r[0], r1: r[1], rn } };
+      if (qr) { cell.N = qr.N; cell.mods = qr.mods; } else { cell.bm = new Uint8Array(bw * bh); for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) cell.bm[y * bw + x] = gray[(y0 + y) * w + x0 + x]; }
+      // کپشن (نوشتهٔ کد زیر QR) به‌صورت تصویر خاکستری، برای حالتی که لایهٔ متن PDF در دسترس نباشد
+      const cs = small.filter(s => s[0] > r[1] && s[0] < rn);
+      let cy0 = cs.length ? cs[0][0] : (capRows ? capRows[0] : -1), cy1 = cs.length ? cs[cs.length - 1][1] : (capRows ? capRows[1] : -1);
+      if (cy0 >= 0 && cy1 > cy0 && qr) {
+        const m = Math.round(len(c) * 0.15), cx0 = Math.max(0, c[0] - m), cx1 = Math.min(w - 1, c[1] + m);
+        let tx0 = 1e9, tx1 = -1, ty0 = 1e9, ty1 = -1;
+        for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++) if (gray[y * w + x] < 170) { if (x < tx0) tx0 = x; if (x > tx1) tx1 = x; if (y < ty0) ty0 = y; if (y > ty1) ty1 = y; }
+        if (tx1 > tx0 && ty1 > ty0 && ty1 - ty0 < len(r)) { const cw = tx1 - tx0 + 1, ch = ty1 - ty0 + 1, bm = new Uint8Array(cw * ch); for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) bm[y * cw + x] = gray[(ty0 + y) * w + tx0 + x]; cell.cap = { w: cw, h: ch, bm }; }
+      }
+      cells.push(cell);
+    });
+  });
+  return { grid: true, cells, cols: cr.length, rows: rr.length };
+}
+
+const LH = () => Math.max(10, +$('lh').value || 30);
+const LHD = () => Math.round(LH() * 8);       // ارتفاع لیبل به نقطه (عدد صحیح، برای ارتفاع اعشاری مثل ۳۴٫۵)
+const lcan = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); return c; };
+function drawQR(cv, mods, N, x0, y0, wMax, hMax, quiet, even){
+  let k = Math.floor(Math.min(wMax, hMax) / (N + 2 * quiet));
+  if (even && k > 1) k -= k % 2;
+  if (k < 1) return 0;
+  const x = cv.getContext('2d'); x.fillStyle = '#000';
+  const ox = x0 + Math.floor((wMax - N * k) / 2), oy = y0 + Math.floor((hMax - N * k) / 2);
+  for (let i = 0; i < N; i++) { let j = 0; while (j < N) { if (mods[i * N + j]) { let e = j; while (e < N && mods[i * N + e]) e++; x.fillRect(ox + j * k, oy + i * k, (e - j) * k, k); j = e; } else j++; } }
+  return k;
+}
+function wrapText(x, text, maxW, maxLines){
+  const words = text.split(/\s+/), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (x.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.?.?$/, '…'); }
+  return lines;
+}
+/* ---------- تولید QR (حالت بایت، سطح L/M، نسخه ۱ تا ۱۰، بدون کتابخانه‌ی بیرونی) ---------- */
+const QR_ECC = { L: { fmt: 1, per: [7,10,15,20,26,18,20,24,30,18], blk: [1,1,1,1,1,2,2,2,2,4] },
+                 M: { fmt: 0, per: [10,16,26,18,24,16,18,22,22,26], blk: [1,1,1,2,2,4,4,4,5,5] } };
+function qrRaw(v){ let r = (16 * v + 128) * v + 64; if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; }
+function gfMul(x, y){ let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z & 255; }
+function rsDiv(deg){ const r = new Array(deg).fill(0); r[deg - 1] = 1; let root = 1; for (let i = 0; i < deg; i++) { for (let j = 0; j < r.length; j++) { r[j] = gfMul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; } root = gfMul(root, 2); } return r; }
+function rsRem(data, div){ const r = new Array(div.length).fill(0); for (const b of data) { const f = b ^ r.shift(); r.push(0); div.forEach((c, i) => { r[i] ^= gfMul(c, f); }); } return r; }
+function qrEncode(text, level, forceMask){
+  const E = QR_ECC[level || 'M'], bytes = Array.from(new TextEncoder().encode(text));
+  let ver = 0;
+  for (let v = 1; v <= 10; v++) { const cap = Math.floor(qrRaw(v) / 8) - E.per[v-1] * E.blk[v-1]; if (4 + (v < 10 ? 8 : 16) + bytes.length * 8 <= cap * 8) { ver = v; break; } }
+  if (!ver) throw new Error('متن QR بیش از حد طولانی است');
+  const size = ver * 4 + 17, cap = Math.floor(qrRaw(ver) / 8) - E.per[ver-1] * E.blk[ver-1];
+  const bits = []; const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+  put(4, 4); put(bytes.length, ver < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+  put(0, Math.min(4, cap * 8 - bits.length)); while (bits.length % 8) bits.push(0);
+  for (let p = 0xEC; bits.length < cap * 8; p ^= 0xEC ^ 0x11) put(p, 8);
+  const data = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b); }
+  const nb = E.blk[ver-1], eccLen = E.per[ver-1], raw = Math.floor(qrRaw(ver) / 8), nShort = nb - raw % nb, shortLen = Math.floor(raw / nb), div = rsDiv(eccLen), blocks = [];
+  for (let i = 0, k = 0; i < nb; i++) { const dat = data.slice(k, k + shortLen - eccLen + (i < nShort ? 0 : 1)); k += dat.length; const ecc = rsRem(dat, div); if (i < nShort) dat.push(0); blocks.push(dat.concat(ecc)); }
+  const all = []; for (let i = 0; i < blocks[0].length; i++) blocks.forEach((b, j) => { if (i !== shortLen - eccLen || j >= nShort) all.push(b[i]); });
+  const mod = Array.from({ length: size }, () => new Array(size).fill(false)), fn = Array.from({ length: size }, () => new Array(size).fill(false));
+  const setF = (x, y, d) => { mod[y][x] = d; fn[y][x] = true; };
+  for (let i = 0; i < size; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+  const finder = (cx, cy) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy; if (x >= 0 && x < size && y >= 0 && y < size) setF(x, y, d !== 2 && d !== 4); } };
+  finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+  const ap = []; if (ver > 1) { const n = Math.floor(ver / 7) + 2, step = Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2; ap.push(6); for (let p = size - 7; ap.length < n; p -= step) ap.splice(1, 0, p); }
+  ap.forEach((a, i) => ap.forEach((b, j) => { if ((i === 0 && j === 0) || (i === 0 && j === ap.length - 1) || (i === ap.length - 1 && j === 0)) return; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setF(a + dx, b + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }));
+  const gb = (v, i) => ((v >>> i) & 1) !== 0;
+  const fmt = mask => {
+    const d = (E.fmt << 3) | mask; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537); const b = ((d << 10) | r) ^ 0x5412;
+    for (let i = 0; i <= 5; i++) setF(8, i, gb(b, i)); setF(8, 7, gb(b, 6)); setF(8, 8, gb(b, 7)); setF(7, 8, gb(b, 8));
+    for (let i = 9; i < 15; i++) setF(14 - i, 8, gb(b, i));
+    for (let i = 0; i < 8; i++) setF(size - 1 - i, 8, gb(b, i));
+    for (let i = 8; i < 15; i++) setF(8, size - 15 + i, gb(b, i));
+    setF(8, size - 8, true);
+  };
+  fmt(0);
+  if (ver >= 7) { let r = ver; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25); const b = (ver << 12) | r; for (let i = 0; i < 18; i++) { const a = size - 11 + i % 3, c = Math.floor(i / 3); setF(a, c, gb(b, i)); setF(c, a, gb(b, i)); } }
+  for (let i = 0, right = size - 1; right >= 1; right -= 2) { if (right === 6) right = 5; for (let v = 0; v < size; v++) for (let j = 0; j < 2; j++) { const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - v : v; if (!fn[y][x] && i < all.length * 8) { mod[y][x] = gb(all[i >>> 3], 7 - (i & 7)); i++; } } }
+  const mk = [(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const apply = m => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fn[y][x] && mk[m](x, y)) mod[y][x] = !mod[y][x]; };
+  const penalty = () => {
+    let p = 0;
+    for (let y = 0; y < size; y++) { let run = 1; for (let x = 1; x < size; x++) { if (mod[y][x] === mod[y][x-1]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (let x = 0; x < size; x++) { let run = 1; for (let y = 1; y < size; y++) { if (mod[y][x] === mod[y-1][x]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) { const c = mod[y][x]; if (c === mod[y][x+1] && c === mod[y+1][x] && c === mod[y+1][x+1]) p += 3; }
+    let dark = 0; mod.forEach(r => r.forEach(c => { if (c) dark++; })); p += Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size)) * 10;
+    return p;
+  };
+  let best = 0, bp = 1e9;
+  for (let m = 0; m < 8; m++) { apply(m); fmt(m); const p = penalty(); if (p < bp) { bp = p; best = m; } apply(m); }
+  if (forceMask != null) best = forceMask;
+  apply(best); fmt(best);
+  const mods = new Uint8Array(size * size); for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) mods[y * size + x] = mod[y][x] ? 1 : 0;
+  return { N: size, mods };
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  text = String(text).replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  let delim = ',', bc = -1;
+  [',', ';', '\t', '|'].forEach(d => { const c = first.split(d).length - 1; if (c > bc) { bc = c; delim = d; } });
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(c => c.trim() !== '')) rows.push(row); row = []; }
+    else cur += ch;
+  }
+  row.push(cur); if (row.some(c => c.trim() !== '')) rows.push(row);
+  if (!rows.length) return { rows: [], error: 'فایل CSV خالی است' };
+  const reCode = /^(id|code|sku|qr|barcode|item|شناسه|کد|بارکد|کدکالا|کد کالا)/i, reName = /(name|title|desc|نام|عنوان|شرح|محصول|کالا)/i;
+  const head = rows[0].map(c => c.trim());
+  let ci = head.findIndex(c => reCode.test(c)), ni = head.findIndex((c, i) => i !== ci && reName.test(c)), start = 1;
+  if (ci < 0 && ni < 0) { ci = 0; ni = head.length > 1 ? 1 : -1; start = 0; }
+  else { if (ci < 0) ci = ni === 0 ? 1 : 0; }
+  const seen = new Set(), out = []; let empty = 0, dup = 0, long = 0;
+  for (let i = start; i < rows.length; i++) {
+    const code = (rows[i][ci] || '').trim(), name = ni >= 0 ? (rows[i][ni] || '').trim() : '';
+    if (!code) { empty++; continue; }
+    if (new TextEncoder().encode(code).length > 200) { long++; continue; }
+    if (seen.has(code)) dup++; seen.add(code);
+    out.push({ code, name });
+  }
+  return { rows: out, empty, dup, long, ci, ni, head, delim, hasHeader: start === 1 };
+}
+function csvLabel(row){
+  const H = LHD(), cv = lcan(W, H), even = false, qr = qrEncode(row.code, 'M');
+  const qw = Math.min(W - 150, H - 8), x = cv.getContext('2d');
+  const k = drawQR(cv, qr.mods, qr.N, 4, 4, qw, H - 8, 2, even), used = k ? k * (qr.N + 4) : qw;
+  x.fillStyle = '#000'; x.direction = 'rtl'; x.textAlign = 'right'; x.textBaseline = 'top';
+  const tx = W - 8, tw = W - used - 24;
+  if (tw > 60 && row.name) {
+    x.font = 'bold 28px Tahoma, sans-serif';
+    const ls = wrapText(x, row.name, tw, 4);
+    ls.forEach((l, i) => x.fillText(l, tx, 14 + i * 36));
+  }
+  x.direction = 'ltr'; x.textAlign = 'right'; x.textBaseline = 'bottom'; x.font = 'bold 22px monospace';
+  if (tw > 60) x.fillText(row.code.slice(0, 14), tx, H - 8);
+  return cv;
+}
+function cellLabel(cell){
+  const H = LHD(), cv = lcan(W, H), even = false, x = cv.getContext('2d');
+  const withCap = $('capt').checked && (cell.text || cell.cap);
+  if (cell.mods) {
+    if (withCap) {
+      const qw = Math.min(H - 8, W - 140), k = drawQR(cv, cell.mods, cell.N, 4, 4, qw, H - 8, 2, even);
+      if (k) {
+        const ax = 4 + qw + 6, aw = W - ax - 6;
+        if (cell.text) {
+          x.fillStyle = '#000'; x.textBaseline = 'middle'; x.direction = /[\u0600-\u06FF]/.test(cell.text) ? 'rtl' : 'ltr'; x.textAlign = x.direction === 'rtl' ? 'right' : 'left';
+          let fs = 34, lines;
+          for (; fs >= 14; fs -= 2) { x.font = 'bold ' + fs + 'px ' + (x.direction === 'rtl' ? 'Tahoma, sans-serif' : 'monospace'); lines = wrapText(x, cell.text, aw, 3); if (lines.every(l => x.measureText(l).width <= aw)) break; }
+          const lh = Math.round(fs * 1.25), y0 = H / 2 - (lines.length - 1) * lh / 2;
+          lines.forEach((l, i) => x.fillText(l, x.direction === 'rtl' ? ax + aw : ax, y0 + i * lh));
+        } else {
+          const g = lcan(cell.cap.w, cell.cap.h), gx = g.getContext('2d'), im = gx.createImageData(cell.cap.w, cell.cap.h);
+          for (let i = 0; i < cell.cap.bm.length; i++) { const v = cell.cap.bm[i]; im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = v; im.data[i*4+3] = 255; }
+          gx.putImageData(im, 0, 0);
+          const s = Math.min(aw / cell.cap.w, (H - 40) / cell.cap.h), dw = Math.round(cell.cap.w * s), dh = Math.round(cell.cap.h * s);
+          x.imageSmoothingEnabled = true; x.drawImage(g, ax, Math.round((H - dh) / 2), dw, dh);
+        }
+        return cv;
+      }
+    }
+    if (drawQR(cv, cell.mods, cell.N, 0, 0, W, H - 8, 3, even)) return cv;
+  }
+  const g = lcan(cell.bw, cell.bh), gx = g.getContext('2d'), im = gx.createImageData(cell.bw, cell.bh);
+  for (let i = 0; i < cell.bm.length; i++) { const v = cell.bm[i]; im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = v; im.data[i*4+3] = 255; }
+  gx.putImageData(im, 0, 0);
+  const s = Math.min((W - 16) / cell.bw, (H - 12) / cell.bh), dw = Math.round(cell.bw * s), dh = Math.round(cell.bh * s);
+  x.imageSmoothingEnabled = true; x.drawImage(g, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
+  return cv;
+}
+async function analyzePdf(pdf, onProg){
+  const items = []; let grids = 0;
+  for (let p = 1; p <= pdf.numPages; p++) {
+    onProg(p, pdf.numPages);
+    const page = await pdf.getPage(p), v1 = page.getViewport({ scale: 1 });
+    const v = page.getViewport({ scale: Math.min(2, 2000 / Math.max(v1.width, v1.height)) });
+    const cv = lcan(Math.round(v.width), Math.round(v.height)), g = cv.getContext('2d');
+    await page.render({ canvasContext: g, viewport: v }).promise; page.cleanup();
+    const d = g.getImageData(0, 0, cv.width, cv.height).data, gray = new Uint8Array(cv.width * cv.height);
+    for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j] * 299 + d[j+1] * 587 + d[j+2] * 114) / 1000;
+    const r = analyzeGray(gray, cv.width, cv.height);
+    if (r.grid && r.cells.length) {
+      try { // متن کد زیر هر QR از لایهٔ متن PDF؛ اگر نبود/خطا داد، از تصویر کپشن استفاده می‌شود
+        const tc = await page.getTextContent(), its = [];
+        for (const it of tc.items) { const s = (it.str || '').trim(); if (!s) continue; const t = pdfjsLib.Util.transform(v.transform, it.transform); its.push({ s, x: t[4] + (it.width || 0) * v.scale / 2, y: t[5] }); }
+        r.cells.forEach(c => {
+          const bx = c.box, m = (bx.c1 - bx.c0) * 0.15;
+          const got = its.filter(i => i.x >= bx.c0 - m && i.x <= bx.c1 + m && i.y > bx.r1 - 4 && i.y < bx.rn).sort((a, b) => a.y - b.y || a.x - b.x);
+          if (got.length) c.text = got.map(i => i.s).join(' ').slice(0, 60);
+        });
+      } catch(e){}
+    }
+    if (r.grid && r.cells.length) { grids++; r.cells.forEach(c => items.push({ page: p - 1, cell: c })); }
+    else items.push({ page: p - 1, cell: null });
+    await sleep(0);
+  }
+  return { items, grids };
+}
+
+let src = { type: null, count: 0, pdf: null, items: null, rows: null, sig: '' };
+
+function hash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h >>> 0); }
+function sigOf(files){ return hash(files.map(f => f.name + ':' + f.size).join('|')); }
+function applyY(cv){ // جابه‌جایی عمودی کل محتوای لیبل (تنظیم محل چاپ روی کاغذ؛ جدا از محتوای PDF)
+  const yo = Math.round(+$('yoff').value || 0); if (!yo) return cv;
+  const o = lcan(cv.width, cv.height); o.getContext('2d').drawImage(cv, 0, yo); return o;
+}
+function mono(cv){ // آستانهٔ ثابت ۱۲۸ (متن/QR)
+  const w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data, bits = new Uint8Array(h * BYTES);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const j = (y * w + x) * 4; if (0.299 * d[j] + 0.587 * d[j+1] + 0.114 * d[j+2] < 128) bits[y * BYTES + (x >> 3)] |= 0x80 >> (x & 7); }
+  return { bits, h };
+}
+async function buildPage(i){
+  if (src.type === 'csv') return mono(applyY(csvLabel(src.rows[i])));
+  const it = src.items && src.items[i];
+  if (!it || !it.cell) throw new Error('برگ ' + (i + 1) + ' لیبل ندارد');
+  return mono(applyY(cellLabel(it.cell)));
+}
+
+/* ---------- ESC/POS raster (GS v 0) ---------- */
+function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
+function trailFeed(n, h){                                      // ردیف‌های سفید بعد از لیبل n: مجموع گام‌ها با اعشار جمع می‌شود تا خطا انباشته نشود
+  const pd = PITCHD();
+  return Math.max(0, Math.round(n * pd) - Math.round((n - 1) * pd) - h);
+}
+const PITCHD = () => Math.max(10, +$('pitch').value || 39) * 8, HEADD = () => Math.round(Math.max(0, +$('head').value || 0) * 8);
+// از لبه‌ی برش (فاصله‌ی بین دو لیبل زیر لبه) تا ابتدای لیبل بعدی زیر سر چاپ
+const toStart = () => { const P = Math.round(PITCHD()), r = HEADD() % P; return r ? P - r : 0; };
+const bandRows = () => Math.max(1, Math.min(3, Math.round(+$('band').value || 3)));
+function band(bits, y0, r){                                    // یک فرمان کامل GS v 0 برای r ردیف (حداکثر ۸ + ۳×۴۸ = ۱۵۲ بایت)
+  return concat([new Uint8Array([0x1D, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, r & 255, r >> 8]), bits.subarray(y0 * BYTES, (y0 + r) * BYTES)]);
+}
+// هر لیبل = فهرستی از فریم‌ها؛ هر فریم دقیقاً یک بستهٔ بلوتوث و یک فرمان کامل است.
+// اگر بسته‌ای گم شود یا دوبار برسد، فقط یک نوار ۱ تا ۳ ردیفی اثر می‌گیرد و فرمان بعدی پرینتر را دوباره هم‌گام می‌کند
+// (در نسخه‌های قبل یک فرمان ۱۳ کیلوبایتی بود و یک بایت گم‌شده باقی تصویر را به متن/آشغال تبدیل می‌کرد).
+function jobFrames(bits, h, n){
+  if (bits.length !== BYTES * h) throw new Error('اندازه‌ی بیت‌مپ نادرست: ' + bits.length);
+  const r = bandRows(), fd = trailFeed(n, h), fr = [];
+  for (let y = 0; y < h; y += r) fr.push(band(bits, y, Math.min(r, h - y)));
+  fr[0] = concat([new Uint8Array([0x1B, 0x40]), fr[0]]);                                    // ESC @ فقط اول لیبل
+  return fr.concat(blankFrames(fd));                                                         // فاصله تا لیبل بعدی با ردیف سفید
+}
+// حرکت کاغذ با چاپ ردیف‌های سفید: این پرینتر به فرمان‌های جداگانه‌ی فید (ESC J، FF، GS FF) واکنش نشان نداد،
+// ولی چاپ تصویر همیشه کاغذ را جلو می‌برد. هر فریم یک فرمان کامل GS v 0 با ردیف‌های صفر است.
+const ZERO = new Uint8Array(BYTES * 3);
+function blankFrames(dots){ const fr = [], r = bandRows(); for (let y = 0; y < dots; y += r) fr.push(band(ZERO, 0, Math.min(r, dots - y))); return fr; }
+/* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
+const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
+const userDelay = () => Math.max(0, +$('delay').value || 0);
+let device = null, chr = null, tConn = 0, opening = null;
+const job = { running: false, paused: false, stop: false };
+function openChar(){                                           // هم‌زمان فقط یک تلاش اتصال (دکمه‌ها و اتصال خودکار با هم تداخل نکنند)
+  if (!opening) opening = openOnce().finally(() => { opening = null; });
+  return opening;
+}
+async function openOnce(){
+  const server = await device.gatt.connect();
+  const svc = await server.getPrimaryService(SVC);
+  chr = await svc.getCharacteristic(CHR);
+  tConn = Date.now();
+  setStatus('متصل: ' + (device.name || 'پرینتر') + ' (CH1)', true);
+  await sleep(350);
+}
+function attach(d){
+  if (d._pt) return; d._pt = 1;
+  d.addEventListener('gattserverdisconnected', () => {
+    if (d !== device || d.gatt.connected) { log('رویداد قطعِ دیررسیده از اتصال قبلی نادیده گرفته شد'); return; } // اتصال تازه را نبُرد
+    chr = null;
+    if (PS.planned) { PS.planned = false; log('قطع برنامه‌ریزی‌شده برای اتصال تازه — عمر اتصال ' + ((Date.now() - tConn) / 1000).toFixed(1) + ' ثانیه'); if (PS.onPlanned) PS.onPlanned(); return; }
+    if (job.running) { PS.disc++; setStatus('قطع شد — اتصال خودکار', false); if (!job.paused) big('⚠ اتصال قطع شد — در حال اتصال مجدد…' + whereTxt(), 'warn'); statsLine(); }
+    else setStatus('قطع شد (هنگام چاپ خودکار وصل می‌شود)', false);
+    log('اتصال قطع شد — عمر اتصال ' + ((Date.now() - tConn) / 1000).toFixed(1) + ' ثانیه' + (job.running ? ' (شماره ' + PS.disc + ')' : ''));
+  });
+}
+async function connect(force){
+  if (!navigator.bluetooth) { $('nobt').hidden = false; throw new Error('Web Bluetooth در این مرورگر نیست'); }
+  if (device && !force) {
+    try { await withTimeout(openChar(), 12000); attach(device); return; }
+    catch(e){
+      // فهرست انتخاب پرینتر فقط بلافاصله بعد از لمس باز می‌شود؛ پس این‌جا باز نمی‌کنیم و لمس بعدی «اتصال» آن را باز می‌کند
+      log('اتصال مجدد نشد: ' + errText(e)); try { device.gatt.disconnect(); } catch(_){}
+      device = null; chr = null;
+      throw new Error('پرینتر پیدا نشد — پرینتر را روشن و نزدیک کن و دوباره «اتصال به پرینتر» را بزن');
+    }
+  }
+  try {
+    log('requestDevice: فیلتر PT / 18F0');
+    device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }, { namePrefix: 'PT-' }], optionalServices: [SVC] });
+  } catch(e){ log('requestDevice خطا: ' + errText(e)); setStatus('دستگاه انتخاب نشد: ' + errText(e), false); throw e; }
+  attach(device);
+  if (opening) await opening.catch(() => {});                   // اگر تلاش قبلی هنوز در جریان است، اول تمام شود
+  await openChar();
+  log('کانال آماده: CH1 18F0/2AF1');
+}
+const isUp = () => !!(device && device.gatt.connected && chr);
+
+/* ---------- وضعیت و ارسال ---------- */
+const PS = { planned: false, susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: 0, label: '' };
+const fmtT = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), ms))]);
+function big(t, cls){ const e = $('ptxt'); e.textContent = t; e.className = 'pill big' + (cls ? ' ' + cls : ''); }
+function whereTxt(){ return PS.label ? ' — بعد از اتصال، ' + PS.label + ' از همان بسته ادامه پیدا می‌کند (بدون تکرار لیبل)' : ''; }
+function statsLine(){
+  const sec = PS.t0 ? (Date.now() - PS.t0) / 1000 : 0, sp = sec > 1 ? (PS.bytes / 1024 / sec).toFixed(1) : '—';
+  $('stats').textContent = 'قطع‌شدن: ' + PS.disc + ' • اتصال مجدد موفق: ' + PS.rec + ' • بسته: ' + bandRows() + ' ردیف • سرعت: ' + sp + ' KB/s • زمان: ' + fmtT(sec);
+}
+const MAXRE = 30;                                              // حداکثر تلاش اتصال مجدد حین چاپ (چند دقیقه)؛ بعد چاپ امن متوقف می‌شود
+async function ensureConnected(ctx){
+  if (isUp()) return;
+  if (!device) throw new Error('پرینتر متصل نیست');
+  const t0 = Date.now(), max = ctx ? MAXRE : 6; let n = 0;
+  for (;;) {
+    if (job.stop) throw STOP;
+    if (isUp()) break;
+    if (++n > max) throw new Error('اتصال مجدد بعد از ' + max + ' تلاش ناموفق بود');
+    if (ctx) {
+      big('⚠ قطع شد — اتصال مجدد، تلاش ' + n + ' (' + fmtT((Date.now() - t0) / 1000) + ')…' + whereTxt(), 'warn');
+      if (n >= 8) $('bRe').hidden = false;
+      statsLine();
+    }
+    try { await withTimeout(openChar(), 12000); break; }
+    catch(e){
+      if (e === STOP) throw e;
+      if (n <= 3 || n % 5 === 0) log('اتصال مجدد ' + n + ': ' + errText(e));
+      chr = null;
+      try { device.gatt.disconnect(); } catch(_){}
+      await sleep(Math.min(4000, 600 + n * 350));
+    }
+  }
+  $('bRe').hidden = true;
+  if (ctx && !ctx.planned) { PS.rec++; log('دوباره وصل شد بعد از ' + n + ' تلاش'); }
+  else if (ctx) log('اتصال تازه آماده شد (' + n + ' تلاش)');
+}
+async function write(chunk){ // همیشه با تأیید (write with response)؛ نسخهٔ جدا از بافر اصلی (باگ Bluefy)
+  if (!chr) throw new Error('کانال قطع شد');
+  const r = chr.writeValueWithResponse ? chr.writeValueWithResponse(chunk) : chr.writeValue(chunk);
+  return withTimeout(r, 8000);
+}
+async function freshLink(meta){                                 // قبل از هر لیبل: اگر اتصال کهنه است، در حالت بیکار قطع و دوباره وصل شود
+  const maxAge = Math.max(0, +$('fresh').value || 0) * 1000;
+  if (!maxAge || !isUp() || Date.now() - tConn <= maxAge) return;
+  PS.planned = true; chr = null;
+  const ev = new Promise(res => { PS.onPlanned = res; setTimeout(res, 2000); });          // صبر تا رویداد قطع برسد، تا بعداً اتصال تازه را نبُرد
+  try { device.gatt.disconnect(); } catch(_){}
+  await ev; PS.planned = false; PS.onPlanned = null; await sleep(300);
+  await ensureConnected({ label: meta ? meta.label : '', planned: true });
+}
+async function gate(){
+  if (job.stop) throw STOP;
+  while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
+}
+async function sendAll(frames, st, meta){
+  let tick = Date.now() + (meta && meta.hold ? 1500 : 0);
+  while (st.i < frames.length) {
+    await gate();
+    const f = frames[st.i];
+    await write(f.slice());                                    // هر write یک فرمان کامل؛ کپی جدا از بافر اصلی (باگ Bluefy)
+    PS.bytes += f.length; st.i++;
+    if (meta && Date.now() > tick) {
+      tick = Date.now() + 300;
+      big('🖨 در حال ارسال — ' + meta.label + ' (' + Math.floor(st.i * 100 / frames.length) + '٪)', 'run'); statsLine();
+    }
+    const dl = userDelay(); if (dl) await sleep(dl);
+  }
+}
+async function printUnit(frames, meta){                        // meta.manual = فید دستی: بدون اتصال تازه و با تعداد تلاش محدود
+  const st = { i: 0 }, job_ = meta && !meta.manual, maxFails = job_ ? 40 : 3; let fails = 0, att = 0;
+  for (;;) {
+    att++;
+    try {
+      if (att === 1 && job_) await freshLink(meta);
+      await ensureConnected(job_ ? meta : null);
+      if (att > 1 && job_) { big('✓ دوباره وصل شد — ادامه‌ی ارسال ' + meta.label + ' (از همان بسته)', 'ok'); meta.hold = true; }
+      await sendAll(frames, st, meta);
+      return;
+    } catch(e){
+      if (e === STOP) throw e;
+      if (++fails >= maxFails) throw e;
+      if (job_ && st.i > 0) PS.susp.add(meta.label);
+      log('خطای ارسال (تلاش ' + att + ') در بستهٔ ' + st.i + '/' + frames.length + ': ' + errText(e));
+      chr = null; try { device && device.gatt.disconnect(); } catch(_){}
+      await sleep(600);
+    }
+  }
+}
+
+/* ---------- فایل و پیش‌نمایش ---------- */
+let pt = null, pvTok = 0;
+function sched(){ clearTimeout(pt); pt = setTimeout(updatePreview, 250); }
+async function updatePreview(){
+  if (!src.count) return;
+  const tok = ++pvTok;
+  try {
+    const p = Math.min(Math.max(1, +$('from').value || 1), src.count) - 1;
+    const { bits, h } = await buildPage(p);
+    if (tok !== pvTok) return;
+    const cv = $('pv'); cv.width = W; cv.height = h;
+    const ctx = cv.getContext('2d'), im = ctx.createImageData(W, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < W; x++) {
+      const v = ((bits[y * BYTES + (x >> 3)] >> (7 - (x & 7))) & 1) ? 0 : 255, o = (y * W + x) * 4;
+      im.data[o] = im.data[o+1] = im.data[o+2] = v; im.data[o+3] = 255;
+    }
+    ctx.putImageData(im, 0, 0);
+  } catch(e){ log('پیش‌نمایش: ' + e.message); }
+}
+async function loadPdf(){
+  const a = await analyzePdf(src.pdf, (p, n) => { $('info').textContent = 'تحلیل صفحه ' + p + ' از ' + n + '…'; });
+  const items = a.items.filter(x => x.cell), skipped = a.items.length - items.length;
+  if (!items.length) throw new Error('در این PDF شبکهٔ QR پیدا نشد؛ چیزی چاپ نمی‌شود');
+  src.items = items; src.count = items.length;
+  const q = items.filter(x => x.cell.mods).length, tx = items.filter(x => x.cell.text || x.cell.cap).length;
+  let note = src.count + ' لیبل از ' + src.pdf.numPages + ' صفحه (' + q + ' QR با ساختار معتبر' + (tx ? '، متن کد برای ' + tx + ' لیبل' : '') + (src.count - q ? '، ' + (src.count - q) + ' خانه به‌صورت تصویر' : '') + ')';
+  if (skipped) note += ' — ' + skipped + ' صفحهٔ بدون شبکهٔ QR نادیده گرفته شد';
+  return note;
+}
+function afterLoad(note){
+  const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
+  $('to').value = src.count; $('to').max = $('from').max = src.count;
+  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
+  else $('from').value = 1;
+  $('info').textContent = note; log('فایل: ' + src.type + ' / ' + src.count + ' لیبل');
+  updatePreview();
+}
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('info').textContent = 'در حال خواندن…';
+  try {
+    if (/\.(csv|tsv|txt)$/i.test(f.name) || f.type === 'text/csv' || f.type === 'text/plain') {
+      const buf = await f.arrayBuffer();
+      let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch(_) { text = new TextDecoder('windows-1256').decode(buf); }
+      const r = parseCSV(text);
+      if (!r.rows.length) throw new Error(r.error || 'ردیف معتبری در CSV پیدا نشد');
+      src = { type: 'csv', pdf: null, items: null, rows: r.rows, count: r.rows.length, sig: hash(f.name + ':' + f.size) };
+      let note = r.rows.length + ' لیبل از CSV (ستون کد: ' + (r.head[r.ci] || (r.ci + 1)) + (r.ni >= 0 ? '، نام: ' + (r.head[r.ni] || (r.ni + 1)) : '') + ')';
+      if (r.dup) note += ' — ' + r.dup + ' کد تکراری'; if (r.empty) note += ' — ' + r.empty + ' ردیف بدون کد حذف شد'; if (r.long) note += ' — ' + r.long + ' کد خیلی طولانی حذف شد';
+      afterLoad(note); return;
+    }
+    if (!window.pdfjsLib) throw new Error('کتابخانه‌ی PDF بارگذاری نشد (اینترنت؟)');
+    pdfInit();
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    src = { type: 'pdf', pdf, items: null, rows: null, count: 0, sig: hash(f.name + ':' + f.size) };
+    afterLoad(await loadPdf());
+  } catch(err){
+    src = { type: null, count: 0, pdf: null, items: null, rows: null, sig: '' };
+    $('info').textContent = 'خطا: ' + err.message; log('فایل: ' + err.message);
+  }
+});
+
+/* ---------- صف چاپ ---------- */
+function ui(run){
+  $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
+  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bTspl').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
+  if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
+}
+const profKey = () => [device && device.name, 'escpos', $('head').value, $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
+const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
+const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
+let wlk = null;
+async function wakeOn(){ try { wlk = await navigator.wakeLock.request('screen'); } catch(e){} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && job.running) wakeOn(); });
+const LAST = { sig: '', p: 0 }; // آخرین برگی که در این نشست برای این فایل فرستاده شد
+async function startJob(){
+  if (job.running) return;
+  if (!src.count) { alert('اول فایل PDF را انتخاب کن'); return; }
+  let from = Math.max(1, +$('from').value || 1); const to = Math.min(src.count, +$('to').value || src.count);
+  const copies = Math.max(1, +$('copies').value || 1);
+  if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
+  // جلوگیری از چاپ تکراری: برگ‌هایی از همین فایل که قبلاً در همین نشست فرستاده شده‌اند
+  if (LAST.sig === src.sig && LAST.p >= from) {
+    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
+      from = LAST.p + 1; $('from').value = from;
+      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً چاپ شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
+    }
+  }
+  job.running = true; job.paused = false; job.stop = false; ui(true);
+  Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
+  const total = (to - from + 1) * copies; let done = 0, gateDone = false;
+  $('prog').max = total; $('prog').value = 0;
+  log('پیش‌بررسی: ' + 'ESC/POS GS v 0 نواری • CH1 • ارسال تأییدی • فید با ردیف سفید • سر چاپ تا برش ' + ($('head').value || 0) + ' mm • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm (' + LHD() + ' نقطه)، اتصال تازه ≤ ' + ($('fresh').value || 0) + ' s • نواری: ' + bandRows() + ' ردیف در هر بسته، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش'));
+  const prep = async p => { const { bits, h } = await buildPage(p - 1); return jobFrames(bits, h, p); };
+  let curP = from;                                              // برگی که در حال ارسال است (برای ادامهٔ بدون تکرار)
+  try {
+    big('در حال اتصال به پرینتر…', 'warn');
+    if (!isUp()) await connect();
+    await wakeOn();
+    const align = async why => { const d = toStart(); if (!d) return; big('هم‌ترازی: رفتن به ابتدای لیبل (' + (d / 8).toFixed(1) + ' mm)…', 'run'); await printUnit(blankFrames(d), { label: why }); log(why + ': ' + d + ' ردیف سفید'); };
+    await align('هم‌ترازی شروع');                                // کاغذ از لبه‌ی برش (فاصله‌ی لیبل) تا ابتدای لیبل بعدی زیر سر چاپ
+    let nxt = prep(from); nxt.catch(() => {});
+    for (let p = from; p <= to; p++) {
+      curP = p;
+      await gate();
+      PS.label = 'برگ ' + p + ' از ' + to;
+      big('آماده‌سازی ' + PS.label + '…', 'run');
+      const data = await nxt;
+      if (p < to) { nxt = prep(p + 1); nxt.catch(() => {}); }
+      for (let c = 1; c <= copies; c++) {
+        const meta = { label: 'برگ ' + p + ' از ' + to + (copies > 1 ? ' (کپی ' + c + '/' + copies + ')' : ''), hold: false };
+        PS.label = meta.label;
+        const d0 = PS.disc, tl0 = Date.now();
+        await printUnit(data, meta);
+        { const k = PS.disc - d0; log('حسابداری: ' + meta.label + ' • قطع اتصال حین ارسال: ' + k + ' • مدت ارسال: ' + ((Date.now() - tl0) / 1000).toFixed(1) + ' ثانیه'); if (k > 0) PS.dropL.push(meta.label + ' (×' + k + ')'); }
+        if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); }
+        done++; $('prog').value = done; statsLine();
+        if (!gateDone && total > 1 && !isOk()) {
+          gateDone = true; big('بیرون آوردن لیبل اول برای بررسی…', 'run');
+          await printUnit(blankFrames(HEADD()), { label: 'بیرون آوردن لیبل اول' });   // لیبل اول تا لبه‌ی برش بیرون بیاید تا دیده شود
+          big('✋ لیبل اول بیرون آمد؛ منتظر تأیید تو (بررسی هم‌ترازی)', 'warn'); await sleep(1500);
+          if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف (هدررفت لیبل نداشته باش)')) { job.stop = true; throw STOP; }
+          markOk(); log('هم‌ترازی تأیید شد: ' + profKey());
+          await align('هم‌ترازی دوباره بعد از بررسی');                 // بعد از بیرون آوردن، دوباره ابتدای لیبل بعدی (حداکثر یک لیبل سفید)
+        }
+        { const ps = Math.max(0, +$('lpause').value || 0); for (let t = 0; t < ps * 1000; t += 200) { await gate(); await sleep(200); } }
+      }
+    }
+    big('بیرون آوردن لیبل آخر تا لبه‌ی برش…', 'run');
+    await printUnit(blankFrames(HEADD()), { label: 'بیرون آوردن لیبل آخر' });  // فاصله‌ی بعد از لیبل آخر به لبه‌ی برش می‌رسد
+    LS.set('pt260p:' + src.sig, '0');
+    log('خلاصه: لیبل‌های همراه با قطع اتصال = ' + (PS.dropL.length ? PS.dropL.join('، ') : 'هیچ'));
+    big('ارسال انجام شد (' + total + ' برگ) — چاپ فیزیکی تأیید نشده؛ لیبل‌ها را روی کاغذ بشمار. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec + (PS.susp.size ? ' — ⚠ قطع در میانهٔ ارسال: ' + [...PS.susp].join('، ') + ' (روی کاغذ بررسی کن)' : ''), PS.susp.size ? 'warn' : 'ok');
+  } catch(e){
+    $('from').value = curP;                                     // «شروع چاپ» بعدی از همین برگ ادامه می‌دهد؛ برگ‌های کامل‌شده تکرار نمی‌شوند
+    if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'warn');
+    else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — برگ‌های ۱ تا ' + (curP - 1) + ' فرستاده شده‌اند؛ با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); }
+  } finally {
+    job.running = false; ui(false); statsLine();
+    try { wlk && wlk.release(); } catch(e){}
+  }
+}
+
+/* ---------- رویدادها ---------- */
+$('bConn').onclick = async () => { try { await connect(); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); } };
+$('bStart').onclick = startJob;
+$('bPause').onclick = () => {
+  job.paused = !job.paused;
+  $('bPause').textContent = job.paused ? 'ادامه' : 'توقف موقت';
+  if (job.paused) big('⏸ متوقف (توسط شما) در ' + (PS.label || '—') + ' — با «ادامه» از همین‌جا ادامه می‌دهد', 'warn');
+  else big('▶ ادامه‌ی چاپ — ' + (PS.label || ''), 'run');
+};
+$('bStop').onclick = () => { job.stop = true; job.paused = false; };
+const nudge = d => { $('yoff').value = (+$('yoff').value || 0) + d; $('yoff').dispatchEvent(new Event('change')); log('جابه‌جایی عمودی = ' + $('yoff').value); };
+$('bUp').onclick = () => nudge(-8); $('bDn').onclick = () => nudge(8);
+$('bMFeed').onclick = async () => {
+  if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
+  const n = Math.max(1, Math.min(1000, Math.round(+$('mfeed').value || 0)));
+  job.stop = false; job.paused = false;                         // لغوِ چاپ قبلی نباید فید دستی را از کار بیندازد
+  $('bMFeed').disabled = true;
+  try { if (!isUp()) await connect(); const fr = blankFrames(n), t0 = PS.bytes; await printUnit(fr, { label: 'فید دستی', manual: true }); statsLine(); log('فید دستی ' + n + ' ردیف سفید (' + (n / 8).toFixed(1) + ' mm) در ' + fr.length + ' بسته، ' + (PS.bytes - t0) + ' بایت فرستاده شد'); big('فید دستی انجام شد', 'ok'); }
+  catch (e) { log('فید دستی ناموفق: ' + errText(e)); big('فید دستی انجام نشد: ' + errText(e), 'bad'); }
+  finally { $('bMFeed').disabled = job.running; }
+};
+// آزمایش TSPL: هر خط یک فرمان کامل و یک بستهٔ بلوتوث جدا؛ اندازه از تنظیمات لیبل (ارتفاع، گام)
+function tsplTestFrames(){
+  const H = LHD(), gap = Math.max(0, (+$('pitch').value || 39) - LH()), mm = v => (Math.round(v * 10) / 10) + ' mm';
+  const lines = ['SIZE 48 mm,' + mm(LH()), 'GAP ' + mm(gap) + ',0 mm', 'DIRECTION 0', 'REFERENCE 0,0', 'CLS',
+    'BOX 8,8,' + (W - 8) + ',' + (H - 8) + ',4', 'TEXT 60,' + Math.max(20, Math.round(H / 2) - 24) + ',"3",0,2,2,"TSPL TEST"', 'PRINT 1,1'];
+  log('آزمایش TSPL: ' + lines.join(' | '));
+  return lines.map(l => new TextEncoder().encode(l + '\r\n'));
+}
+$('bTspl').onclick = async () => {
+  if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
+  job.stop = false; job.paused = false; $('bTspl').disabled = true;
+  try { if (!isUp()) await connect(); await printUnit(tsplTestFrames(), { label: 'آزمایش TSPL', manual: true }); log('آزمایش TSPL فرستاده شد — ببین کادر دقیقاً روی لبه‌های یک لیبل چاپ شد یا نه'); big('آزمایش TSPL فرستاده شد — لیبل را نگاه کن', 'ok'); }
+  catch(e){ log('آزمایش TSPL ناموفق: ' + errText(e)); big('آزمایش TSPL انجام نشد: ' + errText(e), 'bad'); }
+  finally { $('bTspl').disabled = job.running; }
+};
+const nudgeHead = d => { $('head').value = Math.max(0, (+$('head').value || 0) + d); $('head').dispatchEvent(new Event('change')); log('فاصله‌ی سر چاپ تا برش = ' + $('head').value + ' mm'); };
+$('bHdUp').onclick = () => nudgeHead(1); $('bHdDn').onclick = () => nudgeHead(-1);
+$('bRe').onclick = async () => { try { await connect(true); $('bRe').hidden = true; } catch(e){ log('اتصال دوباره: ' + errText(e)); } };
+$('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('log').value); } catch(e){ $('log').select(); } };
+</script>
+</body>
+</html>
