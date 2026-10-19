@@ -95,6 +95,11 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     await pg.evaluate(() => document.getElementById('bCal').click()); await idle(pg);
     const r = parse((await state(pg)).rx.slice(before)), cnt = await pg.evaluate(() => JSON.parse(localStorage.getItem('pt260:stat')).bat.since);
     check('calibration label: align + one label + eject, no garbage, counted', r.labels === 1 && r.rows === S + 306 + D && r.garbage === 0 && cnt === 6 && errs.length === 0, `rows=${r.rows}/${S + 306 + D} labels=${r.labels} count=${cnt}`);
+    const ink = await pg.evaluate(async () => {
+      const count = async v => { const b = document.getElementById('bold'); b.value = v; const r = await buildPage(0); let n = 0; for (const x of r.bits) for (let i = 0; i < 8; i++) n += (x >> i) & 1; return n; };
+      return [await count('0'), await count('1'), await count('2')];
+    });
+    check('text boldness adds ink (normal < bold < extra bold)', ink[0] < ink[1] && ink[1] < ink[2], 'black dots ' + ink.join(' / '));
     await pg.click('#bBatEmpty');
     const cap = await pg.evaluate(() => JSON.parse(localStorage.getItem('pt260:stat')).bat.cap);
     check('battery capacity learned from "battery empty" (90% of 6, min 20)', cap === 20, 'cap=' + cap);
