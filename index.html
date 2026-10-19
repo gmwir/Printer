@@ -32,11 +32,15 @@ progress{width:100%;height:14px}
 textarea{width:100%;height:160px;font:12px/1.4 monospace;direction:ltr;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px}
 summary{cursor:pointer;color:var(--mut);padding:6px 0}
 .chk{flex-direction:row;align-items:center;gap:8px;color:var(--tx);font-size:15px}
+.note{font-size:12px;color:var(--mut);margin:4px 0}
+.guide{font-size:13px;line-height:1.9}
+#alerts .warn{margin-bottom:8px}
 </style>
 </head>
 <body>
-<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۷ (ESC/POS نواری + آزمایش TSPL)</small></h1>
+<h1>🖨️ چاپ QR لیبل PT-260 <small id="ver" style="font-weight:400;color:var(--mut);font-size:12px">نسخه ۳۸</small></h1>
 <div id="nobt" class="warn" hidden>این مرورگر Web Bluetooth ندارد. صفحه را در برنامه‌ی <b>Bluefy</b> باز کن.</div>
+<div id="alerts"></div>
 
 <div class="card">
   <h2>۱) اتصال</h2>
@@ -49,33 +53,17 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <input type="file" id="file" accept="application/pdf,.csv,text/csv,text/plain">
   <div class="row"><span class="pill" id="info">فایلی انتخاب نشده</span></div>
   <canvas id="pv" width="384" height="10"></canvas>
+  <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
 </div>
 
 <div class="card">
-  <h2>۳) تنظیم لیبل</h2>
+  <h2>۳) اندازهٔ لیبل</h2>
   <div class="row">
     <label>ارتفاع لیبل (mm)<input type="number" id="lh" value="34.5" min="10" max="120" step="0.1" inputmode="decimal" data-save></label>
-    <label>گام لیبل (mm) = از لبه‌ی بالای یک لیبل تا لبه‌ی بالای لیبل بعدی<input type="number" id="pitch" value="39" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
+    <label>گام لیبل (mm)<input type="number" id="pitch" value="38.2" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
   </div>
-  <p style="font-size:12px;color:var(--mut);margin:0">برای لیبل با اندازه‌ی دیگر فقط همین دو عدد را با خط‌کش عوض کن (عرض چاپ ثابت ۴۸ mm است).</p>
-  <div class="row"><label>جابه‌جایی عمودی چاپ (نقطه؛ ۸ نقطه = ۱ mm؛ عدد مثبت = محتوا پایین‌تر)<input type="number" id="yoff" value="0" min="-400" max="400" inputmode="numeric" data-save></label></div>
-  <div class="row">
-    <button type="button" id="bUp">▲ محتوا ۱ mm بالاتر</button>
-    <button type="button" id="bDn">▼ محتوا ۱ mm پایین‌تر</button>
-  </div>
-  <div class="row">
-    <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm؛ فقط به جلو)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
-    <button type="button" id="bMFeed">فید دستی کاغذ</button>
-  </div>
-  <div class="row"><button type="button" id="bTspl">آزمایش TSPL (یک لیبل: کادر + TEST)</button></div>
-  <p style="font-size:12px;color:var(--mut);margin:0">فقط یک لیبل کوچک به زبان TSPL می‌فرستد. اگر کادر دقیقاً روی لبه‌های یک لیبل چاپ شد، پرینتر TSPL و حسگر لیبل را بدون تغییر حالت قبول می‌کند.</p>
-  <div class="row"><label>فاصله‌ی سر چاپ تا لبه‌ی برش (mm؛ یک بار کالیبره می‌شود)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
-  <div class="row">
-    <button type="button" id="bHdUp">شروع چاپ ۱ mm زودتر</button>
-    <button type="button" id="bHdDn">شروع چاپ ۱ mm دیرتر</button>
-  </div>
-  <p style="font-size:12px;color:var(--mut);margin:0">روش: لیبل‌ها را همیشه از فاصله‌ی بین دو لیبل پاره کن، بعد «شروع چاپ». برنامه خودش کاغذ را تا ابتدای لیبل بعدی جلو می‌برد و در پایان، لیبل آخر را تا لبه‌ی برش بیرون می‌دهد. اگر محتوا پایین‌تر از لیبل افتاد «زودتر»، اگر بالاتر افتاد «دیرتر» را بزن.</p>
-  <label class="chk"><input type="checkbox" id="capt" data-save checked> کد/نوشتهٔ زیر هر QR (در PDF) کنار QR چاپ شود</label>
+  <div class="row"><label>طول ۵ گام (mm): لبهٔ بالای لیبل ۱ تا لبهٔ بالای لیبل ۶ — اختیاری؛ گام خودکار حساب می‌شود<input type="number" id="len5" min="50" max="750" step="0.5" inputmode="decimal" placeholder="مثلاً 191"></label></div>
+  <p class="note">برای رول یا اندازهٔ دیگر فقط ارتفاع و «طول ۵ گام» را با خط‌کش وارد کن. عرض چاپ پرینتر ۴۸ mm است.</p>
 </div>
 
 <div class="card">
@@ -94,20 +82,70 @@ summary{cursor:pointer;color:var(--mut);padding:6px 0}
   <div><span class="pill big" id="ptxt">آماده</span></div>
   <div id="stats" style="font-size:12px;color:var(--mut);direction:rtl"></div>
   <button class="p" id="bRe" hidden style="width:100%;margin-top:8px">اتصال دوباره و ادامه‌ی چاپ</button>
-  <p style="font-size:13px;color:var(--mut);margin:8px 0 0">هنگام چاپ، Bluefy را باز و صفحه را روشن نگه دار.</p>
+  <p class="note">قبل از چاپ، لیبل‌ها را از فاصلهٔ بین دو لیبل پاره کن. هنگام چاپ، Bluefy را باز و صفحه را روشن نگه دار.</p>
 </div>
 
-<div class="card"><details><summary>تنظیمات پیشرفته (ارسال)</summary>
+<div class="card">
+  <h2>۵) باتری و سرویس</h2>
+  <div class="row"><span class="pill big" id="batTxt">باتری: —</span></div>
   <div class="row">
-    <label>ردیف نقطه در هر بسته (۱ تا ۳؛ هر بسته یک فرمان کامل است)<input type="number" id="band" value="3" min="1" max="3" inputmode="numeric" data-save></label>
-    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
-    <label>مکث بین لیبل‌ها (ثانیه)<input type="number" id="lpause" value="2" min="0" max="30" inputmode="numeric" data-save></label>
+    <button type="button" id="bBatFull">شارژ کامل شد</button>
+    <button type="button" id="bBatEmpty">باتری تمام شد</button>
   </div>
-  <div class="row"><label>حداکثر عمر اتصال قبل از ارسال هر لیبل (ثانیه؛ بیشتر از آن قبل از لیبل، اتصال تازه گرفته می‌شود؛ ۰ = خاموش، پیش‌فرض)<input type="number" id="fresh" value="0" min="0" max="30" step="0.1" inputmode="decimal" data-save></label></div>
-  <p style="font-size:12px;color:var(--mut);margin:0">بعد از قطع اتصال، ارسال از همان بسته ادامه پیدا می‌کند؛ لیبل از اول تکرار نمی‌شود.</p>
+  <div class="row"><span class="pill big" id="svcTxt">سرویس: —</span></div>
+  <div class="row">
+    <button type="button" id="bSvcDone">سرویس انجام شد</button>
+    <button type="button" id="bFaint">چاپ کم‌رنگ است</button>
+  </div>
+  <p class="note">عددها تخمینی‌اند و با هر شارژ و هر سرویس دقیق‌تر می‌شوند: بعد از شارژ کامل «شارژ کامل شد»، وقتی پرینتر از باتری خاموش شد «باتری تمام شد»، بعد از تمیز کردن سر چاپ «سرویس انجام شد» و هر وقت چاپ کم‌رنگ دیدی «چاپ کم‌رنگ است» را بزن.</p>
+  <div class="row">
+    <button type="button" id="bCsv">دانلود گزارش (CSV)</button>
+    <button type="button" id="bCsvCopy">کپی گزارش CSV</button>
+  </div>
+</div>
+
+<div class="card"><details><summary>هم‌ترازی (یک بار) و فید دستی</summary>
+  <p class="note">۱) لیبل‌ها را از فاصلهٔ بین دو لیبل پاره کن. ۲) «چاپ لیبل هم‌ترازی» را بزن؛ یک کادر دور لیبل چاپ می‌شود. ۳) اگر کادر پایین‌تر از لیبل افتاد «زودتر»، اگر بالاتر افتاد «دیرتر» را به اندازهٔ میلی‌متر جابه‌جایی بزن و دوباره امتحان کن. عدد ذخیره می‌شود.</p>
+  <div class="row"><button type="button" class="p" id="bCal">چاپ لیبل هم‌ترازی</button></div>
+  <div class="row"><label>فاصله‌ی سر چاپ تا لبه‌ی برش (mm)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
+  <div class="row">
+    <button type="button" id="bHdUp">شروع ۱ mm زودتر</button>
+    <button type="button" id="bHdDn">شروع ۱ mm دیرتر</button>
+  </div>
+  <div class="row">
+    <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
+    <button type="button" id="bMFeed">فید دستی کاغذ</button>
+  </div>
 </details></div>
 
-<div class="card"><details><summary>گزارش (برای رفع اشکال)</summary>
+<div class="card"><details><summary>راهنمای نگهداری و پایداری</summary>
+  <div class="guide">
+  <b>تمیز کردن سر چاپ</b> — هر ۱ تا ۲ رول، یا وقتی چاپ کم‌رنگ/خط‌دار شد یا برنامه هشدار داد: پرینتر را خاموش کن و ۵ دقیقه صبر کن تا خنک شود؛ گوش‌پاک‌کن آغشته به الکل ایزوپروپیل (۷۰ تا ۹۹٪) را آرام و در یک جهت روی سر چاپ و غلتک لاستیکی بکش؛ ۲ تا ۳ دقیقه صبر کن تا خشک شود. هرگز ابزار فلزی، ناخن یا آب.<br>
+  <b>عمر سر چاپ</b> — شدت چاپ را حداکثر نگذار (۸ تا ۱۰ کافی است)؛ برای پررنگی بیشتر اول سرعت را کم کن؛ لیبل باکیفیت استفاده کن.<br>
+  <b>باتری</b> — با آداپتور ۵ ولت ۲ آمپر شارژ کن؛ نگذار کاملاً خالی شود؛ برای چاپ طولانی شارژر وصل باشد؛ در گرما و آفتاب نگذار؛ برای انبار طولانی، حدود نیمه‌شارژ.<br>
+  <b>لیبل</b> — رول را در جای خنک، تاریک و خشک نگه دار؛ گرما و نور لیبل حرارتی را کم‌رنگ می‌کند.<br>
+  <b>بلوتوث</b> — گوشی ۱ تا ۲ متری پرینتر؛ Dlabel و برنامه‌های چاپ دیگر کاملاً بسته باشند؛ Bluefy جلوی صفحه بماند و صفحه قفل نشود؛ حالت کم‌مصرف آیفون خاموش؛ برای چاپ طولانی آیفون هم به شارژ وصل باشد؛ اگر اتصال مدام قطع شد، پرینتر را خاموش‌وروشن و Bluefy را دوباره باز کن.<br>
+  <b>عمومی</b> — درب را محکم ببند؛ وسط چاپ دکمه‌های پرینتر را نزن؛ اگر چراغ چشمک زد، چاپ را لغو کن، کاغذ و درب را بررسی و پرینتر را خاموش‌وروشن کن، سپس «شروع چاپ» از همان برگ ادامه می‌دهد.
+  </div>
+</details></div>
+
+<div class="card"><details><summary>تنظیمات پیشرفته</summary>
+  <div class="row">
+    <label>ردیف نقطه در هر بسته (۱ تا ۳)<input type="number" id="band" value="3" min="1" max="3" inputmode="numeric" data-save></label>
+    <label>تأخیر بین بسته (ms)<input type="number" id="delay" value="0" min="0" max="200" inputmode="numeric" data-save></label>
+    <label>مکث بین لیبل‌ها (ثانیه)<input type="number" id="lpause" value="0.5" min="0" max="30" step="0.1" inputmode="decimal" data-save></label>
+  </div>
+  <div class="row">
+    <label>جابه‌جایی عمودی محتوا (نقطه؛ ۸ = ۱ mm؛ مثبت = پایین‌تر)<input type="number" id="yoff" value="0" min="-400" max="400" inputmode="numeric" data-save></label>
+    <label>اتصال تازه قبل از هر لیبل (ثانیه؛ ۰ = خاموش)<input type="number" id="fresh" value="0" min="0" max="30" step="0.1" inputmode="decimal" data-save></label>
+  </div>
+  <div class="row">
+    <label>هشدار سرویس هر چند لیبل (خودکار یاد گرفته می‌شود)<input type="number" id="svcInt" min="50" max="20000" inputmode="numeric"></label>
+    <label>لیبل با یک شارژ کامل (خودکار یاد گرفته می‌شود)<input type="number" id="batCap" min="20" max="20000" inputmode="numeric"></label>
+  </div>
+</details></div>
+
+<div class="card"><details><summary>گزارش فنی (برای رفع اشکال)</summary>
   <textarea id="log" readonly></textarea>
   <div class="row"><button id="bCopy">کپی گزارش</button></div>
 </details></div>
@@ -127,11 +165,11 @@ function log(m){ const t = new Date().toLocaleTimeString('en-GB'); const L = $('
 function setStatus(t, ok){ const s = $('st'); s.textContent = t; s.className = 'pill' + (ok===true?' ok':ok===false?' bad':''); }
 function errText(e){ if (e === undefined || e === null) return 'خطای ناشناخته'; if (typeof e === 'string') return e; const n = e.name || '', m = e.message || ''; return (n + (n && m ? ': ' : '') + m) || String(e); }
 /* ---------- تنظیمات ذخیره‌شونده ---------- */
-const CFGV = '34', RESET34 = ['lh', 'pitch', 'yoff', 'fresh']; // نسخهٔ ۳۴: یک بار مقدارهای قدیمیِ اندازه‌گیری‌نشده کنار گذاشته می‌شوند
+const CFGV = '38', RESET = ['pitch', 'lpause']; // نسخهٔ ۳۸: یک بار گام اندازه‌گیری‌شده (۳۸٫۲) و مکث کوتاه جایگزین مقدار قبلی می‌شوند
 const cfgOld = LS.get('pt260:cfgv') !== CFGV; LS.set('pt260:cfgv', CFGV);
 document.querySelectorAll('[data-save]').forEach(el => {
-  const k = 'pt260:' + el.id, v = cfgOld && RESET34.includes(el.id) ? null : LS.get(k);
-  if (cfgOld && RESET34.includes(el.id)) LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+  const k = 'pt260:' + el.id, v = cfgOld && RESET.includes(el.id) ? null : LS.get(k);
+  if (cfgOld && RESET.includes(el.id)) LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
   if (v !== null) { if (el.type === 'checkbox') el.checked = v === '1'; else el.value = v; }
   el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
 });
@@ -461,7 +499,7 @@ async function openOnce(){
   chr = await svc.getCharacteristic(CHR);
   tConn = Date.now();
   setStatus('متصل: ' + (device.name || 'پرینتر') + ' (CH1)', true);
-  await sleep(350);
+  await sleep(800);                                              // پرینتر بلافاصله بعد از اتصال آماده‌ی دریافت نیست (اولین بسته timeout می‌شد)
 }
 function attach(d){
   if (d._pt) return; d._pt = 1;
@@ -536,7 +574,7 @@ async function ensureConnected(ctx){
 async function write(chunk){ // همیشه با تأیید (write with response)؛ نسخهٔ جدا از بافر اصلی (باگ Bluefy)
   if (!chr) throw new Error('کانال قطع شد');
   const r = chr.writeValueWithResponse ? chr.writeValueWithResponse(chunk) : chr.writeValue(chunk);
-  return withTimeout(r, 8000);
+  return withTimeout(r, 2500);                                    // پاسخ عادی هر بسته حدود ۱۵ ms است؛ بسته‌ی گیرکرده زود دوباره فرستاده شود
 }
 async function freshLink(meta){                                 // قبل از هر لیبل: اگر اتصال کهنه است، در حالت بیکار قطع و دوباره وصل شود
   const maxAge = Math.max(0, +$('fresh').value || 0) * 1000;
@@ -651,7 +689,7 @@ $('file').addEventListener('change', async e => {
 /* ---------- صف چاپ ---------- */
 function ui(run){
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
-  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bTspl').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
+  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bCal').disabled = run;          // حین چاپ اتصال دستی با اتصال خودکار تداخل نکند
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; }
 }
 const profKey = () => [device && device.name, 'escpos', $('head').value, $('lh').value, $('pitch').value, $('yoff').value, $('capt').checked ? 1 : 0].join('|');
@@ -674,6 +712,8 @@ async function startJob(){
       if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً چاپ شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
     }
   }
+  { const need = (to - from + 1) * copies, left = batLeft();
+    if (need > left && !confirm('این چاپ ' + need + ' لیبل است ولی شارژ باقی‌مانده (تخمینی) حدود ' + left + ' لیبل است.\n\nبهتر است شارژر را وصل کنی.\n\nتأیید = شروع چاپ\nانصراف = بعداً')) return; }
   job.running = true; job.paused = false; job.stop = false; ui(true);
   Object.assign(PS, { susp: new Set(), dropL: [], disc: 0, rec: 0, bytes: 0, t0: Date.now(), label: '' });
   const total = (to - from + 1) * copies; let done = 0, gateDone = false;
@@ -702,7 +742,7 @@ async function startJob(){
         await printUnit(data, meta);
         { const k = PS.disc - d0; log('حسابداری: ' + meta.label + ' • قطع اتصال حین ارسال: ' + k + ' • مدت ارسال: ' + ((Date.now() - tl0) / 1000).toFixed(1) + ' ثانیه'); if (k > 0) PS.dropL.push(meta.label + ' (×' + k + ')'); }
         if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); }
-        done++; $('prog').value = done; statsLine();
+        done++; $('prog').value = done; statsLine(); countLabel(1);
         if (!gateDone && total > 1 && !isOk()) {
           gateDone = true; big('بیرون آوردن لیبل اول برای بررسی…', 'run');
           await printUnit(blankFrames(HEADD()), { label: 'بیرون آوردن لیبل اول' });   // لیبل اول تا لبه‌ی برش بیرون بیاید تا دیده شود
@@ -724,10 +764,102 @@ async function startJob(){
     if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'warn');
     else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — برگ‌های ۱ تا ' + (curP - 1) + ' فرستاده شده‌اند؛ با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); }
   } finally {
+    addEvent('job', { labels: done, printed_until: done ? curP : '', disconnects: PS.disc, seconds: Math.round((Date.now() - PS.t0) / 1000) });
     job.running = false; ui(false); statsLine();
     try { wlk && wlk.release(); } catch(e){}
   }
 }
+
+/* ---------- باتری، سرویس و گزارش (تخمینی؛ با داده‌ی خود کاربر یاد گرفته می‌شود) ---------- */
+// پرینتر درصد باتری و پررنگی چاپ را به برنامه نمی‌دهد؛ پس با شمردن لیبل‌ها و رویدادهایی که کاربر ثبت می‌کند تخمین زده می‌شود.
+const BAT0 = 300, SVC0 = 1000;                                // پیش‌فرض محافظه‌کارانه تا قبل از یادگیری
+const ST = (() => { try { return JSON.parse(LS.get('pt260:stat') || 'null') || {}; } catch(e){ return {}; } })();
+ST.bat = Object.assign({ since: 0, samples: [], cap: null, set: null }, ST.bat || {});
+ST.svc = Object.assign({ since: 0, samples: [], int: null, set: null }, ST.svc || {});
+const EV = (() => { try { return JSON.parse(LS.get('pt260:events') || '[]'); } catch(e){ return []; } })();
+const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+const batCap = () => ST.bat.set || ST.bat.cap || BAT0;
+const svcInt = () => ST.svc.set || ST.svc.int || SVC0;
+function stSave(){ LS.set('pt260:stat', JSON.stringify(ST)); renderStat(); }
+function addEvent(type, o){
+  EV.push(Object.assign({ t: new Date().toISOString(), type, batSince: ST.bat.since, svcSince: ST.svc.since }, o || {}));
+  if (EV.length > 3000) EV.splice(0, EV.length - 3000);
+  LS.set('pt260:events', JSON.stringify(EV));
+}
+const batLeft = () => Math.max(0, batCap() - ST.bat.since);
+function countLabel(n){ ST.bat.since += n; ST.svc.since += n; stSave(); }
+function renderStat(){
+  const cap = batCap(), left = batLeft(), pct = Math.round(left * 100 / cap), learned = !!(ST.bat.set || ST.bat.cap);
+  const b = $('batTxt'); b.textContent = '🔋 باتری (تخمینی): حدود ' + pct + '٪ — تقریباً ' + left + ' لیبل دیگر' + (learned ? '' : ' (هنوز یاد نگرفته؛ عدد پیش‌فرض)');
+  b.className = 'pill big' + (pct <= 20 ? ' warn' : '');
+  const si = svcInt(), done = ST.svc.since, m = (done * (+$('pitch').value || 38.2) / 1000).toFixed(1), rest = si - done;
+  const v = $('svcTxt'); v.textContent = '🧽 سرویس: ' + done + ' لیبل (' + m + ' متر) از آخرین تمیزکاری — ' + (rest > 0 ? 'سرویس بعدی حدود ' + rest + ' لیبل دیگر' : 'وقت تمیز کردن سر چاپ است');
+  v.className = 'pill big' + (rest <= si * 0.1 ? ' warn' : '');
+  const al = [];
+  if (pct <= 20) al.push('🔋 باتری کم است (حدود ' + pct + '٪). شارژر را وصل کن.');
+  if (rest <= 0) al.push('🧽 وقت تمیز کردن سر چاپ است (راهنما را ببین). بعد «سرویس انجام شد» را بزن.');
+  else if (rest <= si * 0.1) al.push('🧽 حدود ' + rest + ' لیبل دیگر وقت تمیز کردن سر چاپ است.');
+  $('alerts').innerHTML = al.map(t => '<div class="warn">' + t + '</div>').join('');
+  if (document.activeElement !== $('batCap')) $('batCap').value = cap;
+  if (document.activeElement !== $('svcInt')) $('svcInt').value = si;
+}
+$('bBatFull').onclick = () => { addEvent('charged'); ST.bat.since = 0; stSave(); log('ثبت شد: شارژ کامل'); };
+$('bBatEmpty').onclick = () => {
+  if (ST.bat.since < 10 && !confirm('از آخرین «شارژ کامل» فقط ' + ST.bat.since + ' لیبل ثبت شده. باز هم «باتری تمام شد» ثبت شود؟')) return;
+  addEvent('battery_empty'); ST.bat.samples.push(ST.bat.since); ST.bat.samples = ST.bat.samples.slice(-5);
+  ST.bat.cap = Math.max(20, Math.round(avg(ST.bat.samples) * 0.9)); ST.bat.since = ST.bat.cap; stSave();   // ۱۰٪ حاشیه‌ی اطمینان
+  log('ثبت شد: باتری تمام شد — ظرفیت یادگرفته‌شده حدود ' + ST.bat.cap + ' لیبل در هر شارژ');
+};
+$('bSvcDone').onclick = () => { addEvent('serviced'); ST.svc.since = 0; stSave(); log('ثبت شد: سرویس سر چاپ'); };
+$('bFaint').onclick = () => {
+  addEvent('faint'); ST.svc.samples.push(ST.svc.since); ST.svc.samples = ST.svc.samples.slice(-5);
+  ST.svc.int = Math.max(50, Math.round(avg(ST.svc.samples) * 0.8)); stSave();                             // دفعه‌ی بعد زودتر هشدار بده
+  log('ثبت شد: چاپ کم‌رنگ — هشدار سرویس از این به بعد هر حدود ' + ST.svc.int + ' لیبل');
+  alert('ثبت شد. اول سر چاپ را تمیز کن (راهنما)، و اگر باتری کم است شارژ کن. بعد از تمیزکاری «سرویس انجام شد» را بزن.');
+};
+$('batCap').addEventListener('change', e => { const v = Math.round(+e.target.value); ST.bat.set = v >= 20 ? v : null; stSave(); });
+$('svcInt').addEventListener('change', e => { const v = Math.round(+e.target.value); ST.svc.set = v >= 50 ? v : null; stSave(); });
+function csvText(){
+  const cols = ['t', 'type', 'labels', 'printed_until', 'disconnects', 'seconds', 'batSince', 'svcSince'];
+  return '﻿' + [cols.join(',')].concat(EV.map(e => cols.map(c => e[c] == null ? '' : String(e[c]).replace(/[",\n]/g, ' ')).join(','))).join('\n');
+}
+$('bCsv').onclick = () => {
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csvText()], { type: 'text/csv' })); a.download = 'pt260-report.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+  catch(e){ alert('دانلود در این مرورگر ممکن نشد؛ از «کپی گزارش CSV» استفاده کن.'); }
+};
+$('bCsvCopy').onclick = async () => { try { await navigator.clipboard.writeText(csvText()); alert('گزارش CSV کپی شد.'); } catch(e){ alert('کپی ممکن نشد.'); } };
+$('len5').addEventListener('change', e => {
+  const v = +e.target.value; if (!(v >= 50)) return;
+  $('pitch').value = (Math.round(v / 5 * 10) / 10).toFixed(1); $('pitch').dispatchEvent(new Event('change'));
+  log('گام از «طول ۵ گام» = ' + v + ' mm حساب شد: ' + $('pitch').value + ' mm'); big('گام لیبل تنظیم شد: ' + $('pitch').value + ' mm', 'ok');
+});
+$('pitch').addEventListener('change', renderStat);
+renderStat();
+
+/* ---------- لیبل هم‌ترازی (کادر دور لیبل) ---------- */
+function calibLabel(){
+  const H = LHD(), cv = lcan(W, H), x = cv.getContext('2d');
+  x.strokeStyle = '#000'; x.lineWidth = 4; x.strokeRect(6, 6, W - 12, H - 12);
+  x.fillStyle = '#000'; x.font = 'bold 30px Tahoma, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+  x.fillText('هم‌ترازی', W / 2, H / 2 - 18); x.font = '20px Tahoma, sans-serif'; x.fillText('کادر باید روی لبه‌های لیبل باشد', W / 2, H / 2 + 22);
+  return cv;
+}
+$('bCal').onclick = async () => {
+  if (job.running) return;
+  job.running = true; job.stop = false; job.paused = false; ui(true);
+  try {
+    if (!isUp()) await connect();
+    const d = toStart(), { bits, h } = mono(applyY(calibLabel()));
+    big('چاپ لیبل هم‌ترازی…', 'run');
+    if (d) await printUnit(blankFrames(d), { label: 'هم‌ترازی شروع' });
+    await printUnit(jobFrames(bits, h, 1), { label: 'لیبل هم‌ترازی' });
+    await printUnit(blankFrames(HEADD()), { label: 'بیرون آوردن لیبل هم‌ترازی' });
+    countLabel(1); addEvent('calibration', { labels: 1 });
+    log('لیبل هم‌ترازی چاپ شد • سر چاپ تا برش ' + $('head').value + ' mm • گام ' + $('pitch').value + ' mm');
+    big('✓ لیبل هم‌ترازی چاپ شد. اگر کادر پایین‌تر از لیبل است «زودتر»، اگر بالاتر است «دیرتر» را به اندازه‌ی میلی‌متر جابه‌جایی بزن.', 'ok');
+  } catch(e){ big('لیبل هم‌ترازی چاپ نشد: ' + errText(e), 'bad'); log('هم‌ترازی: ' + errText(e)); }
+  finally { job.running = false; ui(false); }
+};
 
 /* ---------- رویدادها ---------- */
 $('bConn').onclick = async () => { try { await connect(); } catch(e){ log('اتصال: ' + errText(e)); setStatus('خطا: ' + errText(e), false); } };
@@ -739,8 +871,6 @@ $('bPause').onclick = () => {
   else big('▶ ادامه‌ی چاپ — ' + (PS.label || ''), 'run');
 };
 $('bStop').onclick = () => { job.stop = true; job.paused = false; };
-const nudge = d => { $('yoff').value = (+$('yoff').value || 0) + d; $('yoff').dispatchEvent(new Event('change')); log('جابه‌جایی عمودی = ' + $('yoff').value); };
-$('bUp').onclick = () => nudge(-8); $('bDn').onclick = () => nudge(8);
 $('bMFeed').onclick = async () => {
   if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
   const n = Math.max(1, Math.min(1000, Math.round(+$('mfeed').value || 0)));
@@ -749,21 +879,6 @@ $('bMFeed').onclick = async () => {
   try { if (!isUp()) await connect(); const fr = blankFrames(n), t0 = PS.bytes; await printUnit(fr, { label: 'فید دستی', manual: true }); statsLine(); log('فید دستی ' + n + ' ردیف سفید (' + (n / 8).toFixed(1) + ' mm) در ' + fr.length + ' بسته، ' + (PS.bytes - t0) + ' بایت فرستاده شد'); big('فید دستی انجام شد', 'ok'); }
   catch (e) { log('فید دستی ناموفق: ' + errText(e)); big('فید دستی انجام نشد: ' + errText(e), 'bad'); }
   finally { $('bMFeed').disabled = job.running; }
-};
-// آزمایش TSPL: هر خط یک فرمان کامل و یک بستهٔ بلوتوث جدا؛ اندازه از تنظیمات لیبل (ارتفاع، گام)
-function tsplTestFrames(){
-  const H = LHD(), gap = Math.max(0, (+$('pitch').value || 39) - LH()), mm = v => (Math.round(v * 10) / 10) + ' mm';
-  const lines = ['SIZE 48 mm,' + mm(LH()), 'GAP ' + mm(gap) + ',0 mm', 'DIRECTION 0', 'REFERENCE 0,0', 'CLS',
-    'BOX 8,8,' + (W - 8) + ',' + (H - 8) + ',4', 'TEXT 60,' + Math.max(20, Math.round(H / 2) - 24) + ',"3",0,2,2,"TSPL TEST"', 'PRINT 1,1'];
-  log('آزمایش TSPL: ' + lines.join(' | '));
-  return lines.map(l => new TextEncoder().encode(l + '\r\n'));
-}
-$('bTspl').onclick = async () => {
-  if (job.running) { alert('اول چاپ را متوقف کنید.'); return; }
-  job.stop = false; job.paused = false; $('bTspl').disabled = true;
-  try { if (!isUp()) await connect(); await printUnit(tsplTestFrames(), { label: 'آزمایش TSPL', manual: true }); log('آزمایش TSPL فرستاده شد — ببین کادر دقیقاً روی لبه‌های یک لیبل چاپ شد یا نه'); big('آزمایش TSPL فرستاده شد — لیبل را نگاه کن', 'ok'); }
-  catch(e){ log('آزمایش TSPL ناموفق: ' + errText(e)); big('آزمایش TSPL انجام نشد: ' + errText(e), 'bad'); }
-  finally { $('bTspl').disabled = job.running; }
 };
 const nudgeHead = d => { $('head').value = Math.max(0, (+$('head').value || 0) + d); $('head').dispatchEvent(new Event('change')); log('فاصله‌ی سر چاپ تا برش = ' + $('head').value + ' mm'); };
 $('bHdUp').onclick = () => nudgeHead(1); $('bHdDn').onclick = () => nudgeHead(-1);

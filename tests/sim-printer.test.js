@@ -68,10 +68,10 @@ let failed = 0;
 const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (info ? '  [' + info + ']' : '')); if (!ok) failed++; };
 
 (async () => {
-  // defaults: label 34.5 mm = 276 dots, pitch 39 mm = 312 dots, print head to tear edge 10 mm = 80 dots.
+  // defaults: label 34.5 mm = 276 dots, pitch 38.2 mm = 305.6 dots (rounded per label), print head to tear edge 10 mm = 80 dots.
   // All paper movement is blank raster rows: start alignment S, 36 blank rows after each label,
   // first-label check (eject D, realign S), end eject D.
-  const H = 276, P = 312, D = 80, S = P - D % P, TOTAL = S + 5 * P + D + S + D;
+  const H = 276, D = 80, S = 306 - D % 306, FIVE = Math.round(5 * 305.6), TOTAL = S + FIVE + D + S + D;
   for (const [mode, K] of [['ok', -1], ['drop', 40], ['dupe', 40], ['lose', 40], ['lose', 92], ['lose', 93]]) {
     const { br, pg, errs } = await page(mode, K);
     await pg.click('#bStart'); await idle(pg);
@@ -86,20 +86,25 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     if (mode === 'lose') check(tag + ': damage limited to one band (<= 160 garbage bytes)', r.garbage <= 160 && r.labels >= 4 && r.rows >= TOTAL - 9, info);
     await br.close();
   }
-  { // TSPL test button: small text label, one complete command per Bluetooth write
-    const { br, pg } = await page('ok', -1);
-    await pg.click('#bTspl'); await pg.waitForFunction(() => !document.getElementById('bTspl').disabled, null, { timeout: 30000 });
-    const { rx, sizes } = await state(pg), txt = new TextDecoder().decode(new Uint8Array(rx)), lines = txt.split('\r\n').filter(Boolean);
-    check('TSPL test sends SIZE 34.5 mm, GAP 4.5 mm, BOX, TEXT, PRINT 1,1 (one line per write)',
-      lines[0] === 'SIZE 48 mm,34.5 mm' && lines[1] === 'GAP 4.5 mm,0 mm' && lines.some(l => l.startsWith('BOX ')) && lines[lines.length - 1] === 'PRINT 1,1' && sizes.length === lines.length && Math.max(...sizes) <= 182,
-      lines.join(' | '));
+  { // Battery / service counters, job report entry, calibration label
+    const { br, pg, errs } = await page('ok', -1);
+    await pg.click('#bStart'); await idle(pg);
+    const st = await pg.evaluate(() => ({ s: JSON.parse(localStorage.getItem('pt260:stat')), e: JSON.parse(localStorage.getItem('pt260:events')), bat: document.getElementById('batTxt').textContent }));
+    check('5 printed labels counted for battery and service, job logged', st.s.bat.since === 5 && st.s.svc.since === 5 && st.e.some(x => x.type === 'job' && x.labels === 5) && /295/.test(st.bat), JSON.stringify(st.s.bat) + ' ' + st.bat);
+    const before = (await state(pg)).rx.length;
+    await pg.evaluate(() => document.getElementById('bCal').click()); await idle(pg);
+    const r = parse((await state(pg)).rx.slice(before)), cnt = await pg.evaluate(() => JSON.parse(localStorage.getItem('pt260:stat')).bat.since);
+    check('calibration label: align + one label + eject, no garbage, counted', r.labels === 1 && r.rows === S + 306 + D && r.garbage === 0 && cnt === 6 && errs.length === 0, `rows=${r.rows}/${S + 306 + D} labels=${r.labels} count=${cnt}`);
+    await pg.click('#bBatEmpty');
+    const cap = await pg.evaluate(() => JSON.parse(localStorage.getItem('pt260:stat')).bat.cap);
+    check('battery capacity learned from "battery empty" (90% of 6, min 20)', cap === 20, 'cap=' + cap);
     await br.close();
   }
   { // Cancel, then manual feed must still work
     const { br, pg } = await page('ok', -1);
     await pg.click('#bStart'); await pg.waitForFunction(() => !document.getElementById('bStop').disabled); await pg.click('#bStop'); await idle(pg);
     const before = (await state(pg)).rx.length;
-    await pg.click('#bMFeed'); await pg.waitForFunction(() => !document.getElementById('bMFeed').disabled, null, { timeout: 30000 });
+    await pg.evaluate(() => document.getElementById('bMFeed').click()); await pg.waitForFunction(() => !document.getElementById('bMFeed').disabled, null, { timeout: 30000 });
     const fed = (await state(pg)).rx.slice(before);
     const fr = parse(fed);
     check('manual feed after cancel sends 64 blank rows', fr.rows === 64 && fr.garbage === 0 && fr.feeds.length === 0, 'rows=' + fr.rows + ' bytes=' + fed.length);
@@ -114,7 +119,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('after failure, resume point is the unfinished label (3)', from === '3', 'from=' + from + ' labels sent=' + r.labels);
     // Manual feed with an unreachable printer must give up on its own and re-enable the button
     const t0 = Date.now();
-    await pg.click('#bMFeed'); await pg.waitForFunction(() => !document.getElementById('bMFeed').disabled, null, { timeout: 90000 });
+    await pg.evaluate(() => document.getElementById('bMFeed').click()); await pg.waitForFunction(() => !document.getElementById('bMFeed').disabled, null, { timeout: 90000 });
     check('manual feed gives up when printer is unreachable', true, ((Date.now() - t0) / 1000).toFixed(0) + ' s');
     await br.close();
   }
