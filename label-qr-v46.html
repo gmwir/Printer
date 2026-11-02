@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>چاپ لیبل QR — V46</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#14171c;--mu:#6a7380;--bd:#d9dde3;--ac:#0b6bff;--ok:#14803c;--er:#c62828;--wa:#b26a00}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 Tahoma,"Geeza Pro","Segoe UI",system-ui,sans-serif;padding:12px env(safe-area-inset-right) 40px env(safe-area-inset-left)}
+.wrap{max-width:560px;margin:0 auto;padding:0 12px}
+h1{font-size:19px;margin:6px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1 small{font-weight:400;color:var(--mu);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:inherit;border:0;border-radius:10px;padding:12px 14px;background:var(--ac);color:#fff;font-weight:600;min-height:46px;cursor:pointer}
+button.sec{background:#e8ebf0;color:var(--tx)}
+button.dg{background:var(--er)}
+button:disabled{opacity:.45}
+button.grow{flex:1}
+.badge{font-size:13px;padding:3px 10px;border-radius:99px;background:#e8ebf0;color:var(--mu)}
+.badge.on{background:#dff3e6;color:var(--ok)}
+.badge.er{background:#fde6e6;color:var(--er)}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:3px}
+textarea,input,select{font:inherit;font-size:16px;width:100%;border:1px solid var(--bd);border-radius:8px;padding:9px 10px;background:#fff;color:var(--tx)}
+textarea{min-height:110px;resize:vertical}
+input[type=checkbox]{width:auto;transform:scale(1.25);margin-inline-end:8px}
+.chk{display:flex;align-items:center;font-size:15px;color:var(--tx);margin:6px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid .full{grid-column:1/-1}
+details>summary{font-weight:600;cursor:pointer;padding:4px 0}
+h3{font-size:14px;margin:14px 0 6px;color:var(--ac)}
+.hint{font-size:12.5px;color:var(--mu);margin-top:4px}
+#msg{min-height:22px;font-size:14px;margin-top:8px}
+#msg.er{color:var(--er)}#msg.ok{color:var(--ok)}#msg.wa{color:var(--wa)}
+progress{width:100%;height:10px}
+.pv{background:#fff;border:1px dashed var(--bd);border-radius:8px;padding:8px;text-align:center}
+#pv{image-rendering:pixelated;max-width:100%;border:1px solid #bbb;background:#fff}
+pre{background:#101418;color:#c9d4df;border-radius:10px;padding:10px;font:12px/1.5 ui-monospace,Menlo,monospace;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left;margin:8px 0}
+.ltr{direction:ltr;text-align:left}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>چاپ لیبل QR <small>V46 · TSPL · Goojprt PT-260</small></h1>
+
+<div class="card">
+  <div class="row">
+    <button id="bConn" class="grow">اتصال به پرینتر</button>
+    <button id="bDisc" class="sec" disabled>قطع</button>
+    <span id="badge" class="badge">قطع</span>
+  </div>
+  <div id="devinfo" class="hint"></div>
+</div>
+
+<div class="card">
+  <label for="lines">هر خط = یک لیبل &nbsp;(<span class="ltr">کد</span> یا <span class="ltr">کد | متن زیر QR</span>)</label>
+  <textarea id="lines" dir="auto" placeholder="ABC-12345&#10;https://example.com/p/77 | روغن موتور ۵W30"></textarea>
+  <div class="grid" style="margin-top:10px">
+    <div><label for="copies">تعداد از هر لیبل</label><input id="copies" type="number" inputmode="numeric" min="1" max="99" class="ltr"></div>
+    <div class="chk" style="align-self:end"><input id="cap" type="checkbox"><label for="cap" style="margin:0;color:var(--tx);font-size:15px">متن کد زیر QR</label></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button id="bPrint" class="grow" disabled>چاپ</button>
+    <button id="bStop" class="sec" disabled>توقف</button>
+  </div>
+  <progress id="prog" value="0" max="1" style="margin-top:10px;display:none"></progress>
+  <div id="msg"></div>
+</div>
+
+<div class="card pv">
+  <canvas id="pv" width="384" height="240"></canvas>
+  <div id="pvinfo" class="hint"></div>
+</div>
+
+<div class="card">
+<details>
+<summary>تنظیمات</summary>
+
+<h3>لیبل و جای چاپ</h3>
+<div class="grid">
+  <div><label for="wmm">عرض لیبل (mm، حداکثر ۴۸)</label><input id="wmm" type="number" step="0.5" class="ltr"></div>
+  <div><label for="hmm">ارتفاع لیبل (mm)</label><input id="hmm" type="number" step="0.5" class="ltr"></div>
+  <div><label for="gap">فاصلهٔ GAP (mm)</label><input id="gap" type="number" step="0.5" class="ltr"></div>
+  <div><label for="dir">جهت (DIRECTION)</label><select id="dir"><option value="0">۰</option><option value="1">۱</option></select></div>
+  <div><label for="offset">OFFSET بعد از چاپ (mm)</label><input id="offset" type="number" step="0.5" class="ltr"></div>
+  <div><label for="xshift">جابه‌جایی افقی (mm، + = راست)</label><input id="xshift" type="number" step="0.125" class="ltr"></div>
+  <div><label for="shift1">جابه‌جایی عمودی لیبل اول بعد از اتصال (mm)</label><input id="shift1" type="number" step="0.125" class="ltr"></div>
+  <div><label for="shiftN">جابه‌جایی عمودی لیبل دوم به بعد (mm)</label><input id="shiftN" type="number" step="0.125" class="ltr"></div>
+</div>
+<div class="hint">جابه‌جایی عمودی: عدد مثبت = چاپ پایین‌تر، منفی = بالاتر. اگر لیبل دوم ۳ میلی‌متر بالاتر می‌افتد، برای «دوم به بعد» مقدار +۳ بگذار. هر ۱ mm = ۸ نقطه.</div>
+
+<h3>QR و متن</h3>
+<div class="grid">
+  <div><label for="qrmm">حداکثر اندازهٔ QR (mm)</label><input id="qrmm" type="number" step="0.5" class="ltr"></div>
+  <div><label for="qtop">فاصله از بالا (mm)</label><input id="qtop" type="number" step="0.5" class="ltr"></div>
+  <div><label for="ecc">تصحیح خطا</label><select id="ecc"><option>L</option><option>M</option><option>Q</option><option>H</option></select></div>
+  <div><label for="font">اندازهٔ متن (نقطه)</label><input id="font" type="number" class="ltr"></div>
+  <div><label for="bold">ضخامت متن (۰ تا ۳)</label><input id="bold" type="number" min="0" max="3" class="ltr"></div>
+</div>
+
+<h3>پررنگی</h3>
+<div class="grid">
+  <div><label for="density">DENSITY (۰ تا ۱۵)</label><input id="density" type="number" min="0" max="15" class="ltr"></div>
+  <div><label for="speed">SPEED (۱ کندتر و پررنگ‌تر)</label><input id="speed" type="number" min="1" max="5" class="ltr"></div>
+</div>
+<label class="chk"><input id="invert" type="checkbox">بیت‌ها معکوس (اگر چاپ negative شد)</label>
+
+<h3>ارسال بلوتوث</h3>
+<div class="grid">
+  <div><label for="wmode">نوع نوشتن</label><select id="wmode"><option value="auto">خودکار</option><option value="resp">با تأیید (پیشنهادی)</option><option value="nores">بدون تأیید</option></select></div>
+  <div><label for="chunk">اندازهٔ هر بسته (بایت)</label><input id="chunk" type="number" class="ltr"></div>
+  <div><label for="delay">مکث بین بسته‌ها (ms، خالی = خودکار)</label><input id="delay" type="number" class="ltr"></div>
+  <div><label for="minwait">مکث بعد از هر لیبل (ms) اگر وضعیت پرینتر خوانده نشد</label><input id="minwait" type="number" step="100" class="ltr"></div>
+</div>
+<div class="row" style="margin-top:12px"><button id="bReset" class="sec">بازگشت به پیش‌فرض</button></div>
+</details>
+</div>
+
+<div class="card">
+  <div class="row">
+    <button id="bCopy" class="grow">کپی گزارش</button>
+    <button id="bClear" class="sec">پاک کردن لاگ</button>
+  </div>
+  <pre id="log"></pre>
+</div>
+</div>
+
+<script>
+/* ===== QR encoder (byte mode, versions 1-40, ECC L/M/Q/H) ===== */
+var QR=(function(){
+  var ECC_CW={
+    L:[-1,7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    M:[-1,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+    Q:[-1,13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    H:[-1,17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]};
+  var NBLK={
+    L:[-1,1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+    M:[-1,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+    Q:[-1,1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+    H:[-1,1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]};
+  var FMT={L:1,M:0,Q:3,H:2};
+  var EXP=new Uint8Array(512),LOG=new Uint8Array(256);
+  (function(){var x=1;for(var i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11D;}for(i=255;i<512;i++)EXP[i]=EXP[i-255];})();
+  function gmul(a,b){return a&&b?EXP[LOG[a]+LOG[b]]:0}
+  function rsGen(deg){var r=[1];for(var i=0;i<deg;i++){var nr=new Array(r.length+1).fill(0);for(var j=0;j<r.length;j++){nr[j]^=r[j];nr[j+1]^=gmul(r[j],EXP[i]);}r=nr;}return r}
+  function rsRem(data,gen){var deg=gen.length-1,res=new Array(deg).fill(0);
+    for(var k=0;k<data.length;k++){var f=data[k]^res.shift();res.push(0);if(f)for(var i=0;i<deg;i++)res[i]^=gmul(gen[i+1],f);}return res}
+  function rawModules(v){var r=(16*v+128)*v+64;if(v>=2){var n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36;}return r}
+  function dataCW(v,e){return Math.floor(rawModules(v)/8)-ECC_CW[e][v]*NBLK[e][v]}
+  function alignPos(v){if(v===1)return[];var n=Math.floor(v/7)+2,size=v*4+17,step=v===32?26:Math.ceil((v*4+4)/(n*2-2))*2,r=[6];
+    for(var p=size-7;r.length<n;p-=step)r.splice(1,0,p);return r}
+  function bit(x,i){return((x>>>i)&1)!==0}
+  function utf8(s){
+    if(typeof TextEncoder!=='undefined')return Array.prototype.slice.call(new TextEncoder().encode(s));
+    var e=unescape(encodeURIComponent(s)),o=[];for(var i=0;i<e.length;i++)o.push(e.charCodeAt(i));return o}
+  function encode(text,ecc){
+    ecc=ECC_CW[ecc]?ecc:'M';
+    var bytes=utf8(text),ver=0,bits;
+    for(var v=1;v<=40;v++){var cc=v<=9?8:16;var need=4+cc+bytes.length*8;if(need<=dataCW(v,ecc)*8){ver=v;break;}}
+    if(!ver)throw new Error('متن برای QR بیش از حد طولانی است');
+    var size=ver*4+17,cap=dataCW(ver,ecc)*8;
+    bits=[];function put(val,len){for(var i=len-1;i>=0;i--)bits.push((val>>>i)&1)}
+    put(4,4);put(bytes.length,ver<=9?8:16);bytes.forEach(function(b){put(b,8)});
+    put(0,Math.min(4,cap-bits.length));put(0,(8-bits.length%8)%8);
+    for(var pad=0xEC;bits.length<cap;pad^=0xEC^0x11)put(pad,8);
+    var data=[];for(var i=0;i<bits.length;i+=8){var b=0;for(var j=0;j<8;j++)b=(b<<1)|bits[i+j];data.push(b)}
+    // blocks + ECC
+    var nb=NBLK[ecc][ver],el=ECC_CW[ecc][ver],raw=Math.floor(rawModules(ver)/8),ns=nb-raw%nb,sl=Math.floor(raw/nb),gen=rsGen(el),blocks=[],k=0;
+    for(i=0;i<nb;i++){var dat=data.slice(k,k+sl-el+(i<ns?0:1));k+=dat.length;var ec=rsRem(dat,gen);if(i<ns)dat.push(0);blocks.push(dat.concat(ec));}
+    var all=[];for(i=0;i<blocks[0].length;i++)for(j=0;j<nb;j++)if(i!==sl-el||j>=ns)all.push(blocks[j][i]);
+    // matrix
+    var m=[],fn=[];for(i=0;i<size;i++){m.push(new Array(size).fill(false));fn.push(new Array(size).fill(false));}
+    function setF(x,y,d){m[y][x]=d;fn[y][x]=true}
+    for(i=0;i<size;i++){setF(6,i,i%2===0);setF(i,6,i%2===0);}
+    function finder(cx,cy){for(var dy=-4;dy<=4;dy++)for(var dx=-4;dx<=4;dx++){var x=cx+dx,y=cy+dy;if(x<0||y<0||x>=size||y>=size)continue;var d=Math.max(Math.abs(dx),Math.abs(dy));setF(x,y,d!==2&&d!==4);}}
+    finder(3,3);finder(size-4,3);finder(3,size-4);
+    var ap=alignPos(ver),na=ap.length;
+    for(i=0;i<na;i++)for(j=0;j<na;j++){if((i===0&&j===0)||(i===0&&j===na-1)||(i===na-1&&j===0))continue;
+      for(var dy=-2;dy<=2;dy++)for(var dx=-2;dx<=2;dx++)setF(ap[i]+dx,ap[j]+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);}
+    function fmtBits(mask){var d=(FMT[ecc]<<3)|mask,r=d;for(var i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);return((d<<10)|r)^0x5412}
+    function drawFmt(mask){var b=fmtBits(mask),i;
+      for(i=0;i<=5;i++)setF(8,i,bit(b,i));setF(8,7,bit(b,6));setF(8,8,bit(b,7));setF(7,8,bit(b,8));
+      for(i=9;i<15;i++)setF(14-i,8,bit(b,i));
+      for(i=0;i<8;i++)setF(size-1-i,8,bit(b,i));
+      for(i=8;i<15;i++)setF(8,size-15+i,bit(b,i));
+      setF(8,size-8,true)}
+    drawFmt(0);
+    if(ver>=7){var r=ver;for(i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);var vb=(ver<<12)|r;
+      for(i=0;i<18;i++){var bt=bit(vb,i),a=size-11+i%3,c=Math.floor(i/3);setF(a,c,bt);setF(c,a,bt);}}
+    // codewords
+    var idx=0;
+    for(var right=size-1;right>=1;right-=2){if(right===6)right=5;
+      for(var vert=0;vert<size;vert++)for(j=0;j<2;j++){var x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;
+        if(!fn[y][x]&&idx<all.length*8){m[y][x]=bit(all[idx>>>3],7-(idx&7));idx++;}}}
+    function applyMask(mask){for(var y=0;y<size;y++)for(var x=0;x<size;x++){var inv;
+      switch(mask){case 0:inv=(x+y)%2===0;break;case 1:inv=y%2===0;break;case 2:inv=x%3===0;break;case 3:inv=(x+y)%3===0;break;
+        case 4:inv=(Math.floor(x/3)+Math.floor(y/2))%2===0;break;case 5:inv=x*y%2+x*y%3===0;break;
+        case 6:inv=(x*y%2+x*y%3)%2===0;break;default:inv=((x+y)%2+x*y%3)%2===0;}
+      if(!fn[y][x]&&inv)m[y][x]=!m[y][x];}}
+    function penalty(){var p=0,y,x,dark=0,line,i;
+      function runs(get){var s='';for(var q=0;q<size;q++)s+=get(q)?'1':'0';
+        var re=/1{5,}|0{5,}/g,mm;while((mm=re.exec(s)))p+=3+mm[0].length-5;
+        for(var a=0;a+11<=size;a++){var w=s.substr(a,11);if(w==='10111010000'||w==='00001011101')p+=40;}}
+      for(y=0;y<size;y++)runs(function(q){return m[y][q]});
+      for(x=0;x<size;x++)runs(function(q){return m[q][x]});
+      for(y=0;y<size;y++)for(x=0;x<size;x++){if(m[y][x])dark++;if(x<size-1&&y<size-1&&m[y][x]===m[y][x+1]&&m[y][x]===m[y+1][x]&&m[y][x]===m[y+1][x+1])p+=3;}
+      var tot=size*size,kk=Math.ceil(Math.abs(dark*20-tot*10)/tot)-1;p+=Math.max(0,kk)*10;return p}
+    var best=0,bp=1e9;
+    for(var mk=0;mk<8;mk++){applyMask(mk);drawFmt(mk);var pp=penalty();if(pp<bp){bp=pp;best=mk;}applyMask(mk);}
+    applyMask(best);drawFmt(best);
+    return{size:size,version:ver,mask:best,get:function(x,y){return m[y][x]}};
+  }
+  return{encode:encode,_dataCW:dataCW};
+})();
+</script>
+
+<script>
+(function(){
+'use strict';
+var VER='V46',SVC=0x18F0,CHR=0x2AF1,DPMM=8,MAXW=384;
+var $=function(id){return document.getElementById(id)};
+var T0=performance.now();
+
+/* ---------- settings ---------- */
+var FIELDS={wmm:['n',48],hmm:['n',30],gap:['n',3],dir:['s','0'],offset:['n',0],xshift:['n',0],shift1:['n',0],shiftN:['n',0],
+  qrmm:['n',20],qtop:['n',2],ecc:['s','M'],font:['n',26],bold:['n',1],cap:['c',true],
+  density:['n',13],speed:['n',2],invert:['c',false],
+  wmode:['s','auto'],chunk:['n',100],delay:['t',''],minwait:['n',2000],copies:['n',1],lines:['x','']};
+function loadCfg(){var o={};try{o=JSON.parse(localStorage.getItem('lbl46')||'{}')}catch(e){}return o}
+function saveCfg(){var o={};for(var k in FIELDS){var t=FIELDS[k][0],el=$(k);o[k]=t==='c'?el.checked:el.value}
+  try{localStorage.setItem('lbl46',JSON.stringify(o))}catch(e){}}
+function fillUI(o,useDef){for(var k in FIELDS){var t=FIELDS[k][0],el=$(k),v=(o&&k in o&&!useDef)?o[k]:FIELDS[k][1];
+  if(t==='c')el.checked=!!v;else el.value=v}}
+function num(k,min,max){var v=parseFloat($(k).value);if(isNaN(v))v=FIELDS[k][1];return Math.min(max,Math.max(min,v))}
+function getCfg(){
+  var d=$('delay').value.trim();
+  return{wmm:num('wmm',10,48),hmm:num('hmm',8,300),gap:num('gap',0,20),dir:$('dir').value==='1'?1:0,offset:num('offset',-20,20),
+    xshift:num('xshift',-24,24),shift1:num('shift1',-20,20),shiftN:num('shiftN',-20,20),qrmm:num('qrmm',6,48),qtop:num('qtop',0,40),
+    ecc:$('ecc').value,font:Math.round(num('font',12,90)),bold:Math.round(num('bold',0,3)),cap:$('cap').checked,
+    density:Math.round(num('density',0,15)),speed:Math.round(num('speed',1,5)),invert:$('invert').checked,
+    wmode:$('wmode').value,chunk:Math.round(num('chunk',20,500)),delay:d===''||isNaN(parseFloat(d))?null:Math.max(0,parseFloat(d)),
+    minwait:Math.round(num('minwait',300,15000)),copies:Math.round(num('copies',1,99))}}
+
+/* ---------- log ---------- */
+var LOG=[];
+function ts(){return((performance.now()-T0)/1000).toFixed(2).padStart(7)}
+function log(s){var line=ts()+'  '+s;LOG.push(line);if(LOG.length>4000)LOG.shift();
+  var el=$('log');el.textContent=LOG.slice(-60).join('\n');el.scrollTop=el.scrollHeight}
+function hex(u,n){var a=Array.prototype.slice.call(u,0,n||u.length).map(function(b){return('0'+b.toString(16)).slice(-2)}).join(' ');return a+(n&&u.length>n?' …':'')}
+function msg(t,c){var m=$('msg');m.textContent=t||'';m.className=c||''}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function f(n){return String(Math.round(n*1000)/1000)}
+
+/* ---------- label rendering ---------- */
+function parseLines(txt,copies){var out=[];
+  txt.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var i=l.indexOf('|'),qr=l,cap=null;
+    if(i>=0){qr=l.slice(0,i).trim();cap=l.slice(i+1).trim()}
+    if(!qr)return;for(var c=0;c<copies;c++)out.push({qr:qr,cap:cap})});return out}
+function wrapText(ctx,text,maxW){var words=text.split(/\s+/).filter(Boolean),lines=[],cur='';
+  words.forEach(function(w){var t=cur?cur+' '+w:w;if(ctx.measureText(t).width<=maxW){cur=t;return}
+    if(cur){lines.push(cur);cur=''}
+    if(ctx.measureText(w).width<=maxW){cur=w;return}
+    var part='';Array.from(w).forEach(function(ch){if(part&&ctx.measureText(part+ch).width>maxW){lines.push(part);part=ch}else part+=ch});cur=part});
+  if(cur)lines.push(cur);return lines}
+function renderLabel(item,cfg){
+  var W=Math.min(MAXW,Math.floor(cfg.wmm*DPMM/8)*8),H=Math.round(cfg.hmm*DPMM);
+  var cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  var ctx=cv.getContext('2d',{willReadFrequently:true});
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#000';
+  var q=QR.encode(item.qr,cfg.ecc),n=q.size;
+  var capText=item.cap!==null?item.cap:(cfg.cap?item.qr:''),hasCap=!!capText;
+  var top=Math.round(cfg.qtop*DPMM),xs=Math.round(cfg.xshift*DPMM);
+  var reserve=hasCap?Math.ceil(cfg.font*1.2)+6:0;
+  var box=Math.min(Math.round(cfg.qrmm*DPMM),W-8,H-top-reserve);
+  var scale=Math.max(1,Math.floor(box/n)),px=n*scale,warn=[];
+  if(scale<2)warn.push('QR خیلی کوچک شد ('+scale+' نقطه برای هر مربع)');
+  if(px>W||px>H-top)warn.push('QR از لیبل بیرون می‌زند');
+  var qx=Math.floor((W-px)/2)+xs,qy=hasCap?top:Math.max(0,Math.floor((H-px)/2));
+  for(var y=0;y<n;y++)for(var x=0;x<n;x++)if(q.get(x,y))ctx.fillRect(qx+x*scale,qy+y*scale,scale,scale);
+  if(hasCap){
+    var y0=qy+px+4,avail=H-y0-2,maxW=W-12,size=cfg.font,lines=[],ok=false;
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.direction=/[֐-ࣿ]/.test(capText)?'rtl':'ltr';
+    for(;size>=14;size-=2){ctx.font='bold '+size+'px Tahoma,"Geeza Pro",Arial,sans-serif';lines=wrapText(ctx,capText,maxW);
+      if(lines.length<=3&&lines.length*size*1.15<=avail){ok=true;break}}
+    if(!ok){size=14;ctx.font='bold 14px Tahoma,"Geeza Pro",Arial,sans-serif';lines=wrapText(ctx,capText,maxW);
+      var maxL=Math.max(1,Math.floor(avail/(size*1.15)));if(lines.length>maxL){lines=lines.slice(0,maxL);warn.push('متن زیر QR کوتاه شد')}}
+    if(avail<12)warn.push('جایی برای متن زیر QR نیست');
+    ctx.strokeStyle='#000';ctx.lineJoin='round';ctx.lineWidth=cfg.bold;
+    lines.forEach(function(ln,i){var tx=Math.round(W/2)+xs,ty=y0+Math.round(i*size*1.15);
+      if(cfg.bold>0)ctx.strokeText(ln,tx,ty);ctx.fillText(ln,tx,ty)});
+  }
+  return{canvas:cv,W:W,H:H,warn:warn,version:q.version}}
+function toMono(r,cfg){
+  var W=r.W,H=r.H,d=r.canvas.getContext('2d').getImageData(0,0,W,H).data,bl=new Uint8Array(W*H);
+  var x0=W,y0=H,x1=-1,y1=-1;
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){var i=(y*W+x)*4;
+    if((d[i]*299+d[i+1]*587+d[i+2]*114)/1000<150){bl[y*W+x]=1;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}
+  if(x1<0)throw new Error('تصویر لیبل خالی است');
+  var bx=x0&~7,ex=(x1+8)&~7,wb=(ex-bx)>>3,h=y1-y0+1,out=new Uint8Array(wb*h);
+  for(var r2=0;r2<h;r2++)for(var c=0;c<wb;c++){var b=0;
+    for(var k=0;k<8;k++){var xx=bx+c*8+k,p=xx<W?bl[(y0+r2)*W+xx]:0;b=(b<<1)|(cfg.invert?p:1-p)}
+    out[r2*wb+c]=b}
+  return{x:bx,y:y0,wb:wb,h:h,data:out,W:W,H:H,black:bl}}
+function enc(s){var u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u}
+function buildJob(mono,cfg,isFirst,H){
+  var sh=Math.round((isFirst?cfg.shift1:cfg.shiftN)*DPMM),y=mono.y+sh,w=[];
+  if(y<0){w.push('جابه‌جایی عمودی از لبهٔ بالا بیرون می‌زند؛ به صفر محدود شد');y=0}
+  if(y+mono.h>H)w.push('بخشی از چاپ از پایین لیبل بیرون می‌زند');
+  var head=enc('SIZE '+f(cfg.wmm)+' mm,'+f(cfg.hmm)+' mm\r\nGAP '+f(cfg.gap)+' mm,0 mm\r\nDIRECTION '+cfg.dir+',0\r\nREFERENCE 0,0\r\nOFFSET '+f(cfg.offset)+' mm\r\nDENSITY '+cfg.density+'\r\nSPEED '+cfg.speed+'\r\nCLS\r\nBITMAP '+mono.x+','+y+','+mono.wb+','+mono.h+',0,');
+  var pre=new Uint8Array(head.length+mono.data.length);pre.set(head,0);pre.set(mono.data,head.length);
+  return{pre:pre,post:enc('\r\nPRINT 1,1\r\n'),y:y,warn:w,head:head.length}}
+
+/* ---------- preview ---------- */
+var pvT=null;
+function schedulePreview(){clearTimeout(pvT);pvT=setTimeout(drawPreview,150)}
+function drawPreview(){
+  var cfg=getCfg(),its=parseLines($('lines').value,1),it=its[0]||{qr:'SAMPLE-123',cap:null};
+  try{var r=renderLabel(it,cfg),pv=$('pv');pv.width=r.W;pv.height=r.H;pv.getContext('2d').drawImage(r.canvas,0,0);
+    var m=toMono(r,cfg);
+    $('pvinfo').textContent='لیبل '+r.W+'×'+r.H+' نقطه · QR نسخه '+r.version+' · داده '+m.wb+'×'+m.h+' = '+m.data.length+' بایت'+(r.warn.length?' · ⚠ '+r.warn.join('، '):'');
+  }catch(e){$('pvinfo').textContent='⚠ '+e.message}}
+
+/* ---------- bluetooth ---------- */
+var S={dev:null,ch:null,nch:null,wm:'nores',statusOK:false,statusMiss:0,rx:[],n:0,busy:false,stop:false,lastSt:null,stats:[],props:''};
+function badge(t,c){var b=$('badge');b.textContent=t;b.className='badge '+(c||'')}
+function uiState(){var on=!!(S.dev&&S.dev.gatt&&S.dev.gatt.connected);
+  $('bDisc').disabled=!on||S.busy;$('bConn').disabled=S.busy;$('bPrint').disabled=!on||S.busy;$('bStop').disabled=!S.busy;
+  badge(on?'متصل':'قطع',on?'on':'')}
+function pr(c){var a=[];['read','write','writeWithoutResponse','notify','indicate'].forEach(function(k){if(c.properties[k])a.push(k)});return a.join('+')}
+function onNotify(e){var v=e.target.value,u=new Uint8Array(v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength));
+  log('RX '+hex(u,32));for(var i=0;i<u.length;i++)S.rx.push(u[i])}
+async function openGatt(dev){
+  var srv=await dev.gatt.connect(),svc=await srv.getPrimaryService(SVC),chars=await svc.getCharacteristics();
+  if(S.nch){try{S.nch.removeEventListener('characteristicvaluechanged',onNotify)}catch(e){}}
+  S.ch=null;S.nch=null;var info=[];
+  chars.forEach(function(c){info.push(c.uuid.slice(4,8)+'['+pr(c)+']')});
+  log('service 18f0 chars: '+info.join(' '));
+  S.props=info.join(' ');
+  S.ch=chars.find(function(c){return c.uuid.indexOf('00002af1')===0})||chars.find(function(c){return c.properties.write||c.properties.writeWithoutResponse});
+  if(!S.ch)throw new Error('مشخصهٔ نوشتن (2AF1) پیدا نشد');
+  S.nch=chars.find(function(c){return c!==S.ch&&(c.properties.notify||c.properties.indicate)})||null;
+  var cfg=getCfg();
+  S.wm=cfg.wmode==='resp'?'resp':cfg.wmode==='nores'?'nores':(S.ch.properties.write?'resp':'nores');
+  if(S.wm==='resp'&&!S.ch.properties.write){log('write-with-response not advertised, using without response');S.wm='nores'}
+  log('write char '+S.ch.uuid.slice(4,8)+' mode='+S.wm);
+  if(S.nch){try{S.nch.addEventListener('characteristicvaluechanged',onNotify);await S.nch.startNotifications();log('notify on '+S.nch.uuid.slice(4,8))}
+    catch(e){log('notify failed: '+e.name+' '+e.message);S.nch=null}}
+}
+async function probeStatus(){
+  S.statusOK=false;S.statusMiss=0;
+  if(!S.nch){log('no notify char: status polling off, timed waits used');return}
+  var b=await queryStatus(1000);
+  if(b===null){log('status probe: no reply → timed waits');return}
+  if((b&~0xBF)!==0){log('status probe: unrecognised reply 0x'+b.toString(16)+' → timed waits');return}
+  S.statusOK=true;log('status probe OK: 0x'+b.toString(16));S.lastSt=b;
+}
+async function connect(){
+  if(!navigator.bluetooth){msg('Web Bluetooth در این مرورگر نیست. با Bluefy باز کن.','er');return}
+  try{
+    msg('در حال جستجو…');
+    var dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SVC]});
+    if(S.dev&&S.dev!==dev){try{S.dev.removeEventListener('gattserverdisconnected',onDisc)}catch(e){}}
+    S.dev=dev;dev.addEventListener('gattserverdisconnected',onDisc);
+    log('device: '+(dev.name||'?')+' id='+String(dev.id).slice(0,8));
+    await openGatt(dev);S.n=0;await probeStatus();
+    $('devinfo').textContent=(dev.name||'پرینتر')+' · '+S.props;
+    msg('وصل شد.','ok');
+  }catch(e){log('connect error '+e.name+': '+e.message);msg('اتصال ناموفق: '+e.message,'er')}
+  uiState()}
+function onDisc(){log('gatt disconnected');uiState()}
+async function ensureConnected(){
+  if(S.dev&&S.dev.gatt.connected&&S.ch)return;
+  for(var i=1;i<=3;i++){try{log('reconnect try '+i);await openGatt(S.dev);await probeStatus();return}catch(e){log('reconnect fail '+e.name+': '+e.message);await sleep(600*i)}}
+  throw new Error('اتصال قطع شد و دوباره وصل نشد')}
+async function disconnect(){try{if(S.dev&&S.dev.gatt.connected)S.dev.gatt.disconnect()}catch(e){}uiState()}
+
+async function writeOne(u8){var ch=S.ch;
+  if(S.wm==='resp'&&ch.writeValueWithResponse)return ch.writeValueWithResponse(u8);
+  if(ch.writeValueWithoutResponse)return ch.writeValueWithoutResponse(u8);
+  return ch.writeValue(u8)}
+async function writeRetry(u8){
+  for(var k=0;k<4;k++){
+    try{await writeOne(u8);return}catch(e){
+      log('write error '+e.name+': '+e.message+' (try '+(k+1)+')');
+      if(S.wm==='resp'&&(e.name==='NotSupportedError'||/not.?support/i.test(e.message))){S.wm='nores';log('switched to without-response');continue}
+      if(!S.dev.gatt.connected)await ensureConnected();
+      await sleep(120*(k+1))}}
+  throw new Error('ارسال به پرینتر ناموفق بود')}
+async function sendBytes(u8,tag,cfg){
+  var delay=cfg.delay!==null?cfg.delay:(S.wm==='resp'?0:15),t0=performance.now(),n=0,mx=0,sum=0;
+  for(var off=0;off<u8.length;off+=cfg.chunk){
+    var part=u8.slice(off,Math.min(off+cfg.chunk,u8.length)),w0=performance.now();
+    await writeRetry(part);var dt=performance.now()-w0;sum+=dt;if(dt>mx)mx=dt;n++;
+    if(delay)await sleep(delay)}
+  var st={tag:tag,bytes:u8.length,chunks:n,mode:S.wm,delay:delay,ms:Math.round(performance.now()-t0),avgWrite:n?Math.round(sum/n*10)/10:0,maxWrite:Math.round(mx)};
+  S.stats.push(st);log('sent '+tag+': '+u8.length+'B / '+n+' chunks / '+st.ms+'ms / avgWrite '+st.avgWrite+'ms max '+st.maxWrite+'ms / '+S.wm);return st}
+async function queryStatus(to){
+  S.rx.length=0;
+  try{await writeOne(new Uint8Array([0x1B,0x21,0x3F]))}catch(e){log('status write error '+e.name);return null}
+  var t0=performance.now();while(performance.now()-t0<(to||600)){if(S.rx.length)return S.rx[0];await sleep(25)}
+  return null}
+var FATAL={0x01:'درب پرینتر باز است',0x02:'کاغذ گیر کرده',0x04:'کاغذ/لیبل تمام شده',0x80:'پرینتر خطا داده'};
+function checkFatal(b){for(var k in FATAL){if(b&k)throw new Error(FATAL[k])}}
+async function pollIdle(minMs,maxMs){
+  var t0=performance.now(),idle=0;
+  while(performance.now()-t0<maxMs){
+    var b=await queryStatus(600);
+    if(b===null){S.statusMiss++;log('status: no reply ('+S.statusMiss+')');if(S.statusMiss>=2){S.statusOK=false;log('status polling disabled');return false}await sleep(250);continue}
+    S.statusMiss=0;if(b!==S.lastSt){log('status 0x'+b.toString(16));S.lastSt=b}
+    checkFatal(b);
+    if(b&0x20)idle=0;else idle++;
+    if(idle>=2&&performance.now()-t0>=minMs)return true;
+    await sleep(250)}
+  log('status: still busy after '+maxMs+'ms');return true}
+
+/* ---------- print run ---------- */
+async function run(){
+  if(S.busy)return;var cfg=getCfg();saveCfg();
+  var items=parseLines($('lines').value,cfg.copies);
+  if(!items.length){msg('حداقل یک خط وارد کن.','er');return}
+  if(items.length>200){msg('حداکثر ۲۰۰ لیبل در هر نوبت.','er');return}
+  // validate + render everything BEFORE the first label is printed
+  var jobs=[];
+  try{items.forEach(function(it,i){
+      var r;try{r=renderLabel(it,cfg)}catch(e){throw new Error('لیبل '+(i+1)+': '+e.message)}
+      var m=toMono(r,cfg);jobs.push({it:it,r:r,m:m})})}
+  catch(e){msg(e.message,'er');log('validate: '+e.message);return}
+  S.busy=true;S.stop=false;uiState();var prog=$('prog');prog.style.display='block';prog.max=jobs.length;prog.value=0;
+  log('=== run: '+jobs.length+' labels, cfg='+JSON.stringify(cfg));
+  var done=0;
+  try{
+    for(var i=0;i<jobs.length;i++){
+      if(S.stop){msg('متوقف شد ('+done+' لیبل چاپ شد).','wa');break}
+      msg('لیبل '+(i+1)+' از '+jobs.length+'…');
+      await ensureConnected();
+      if(S.statusOK){await pollIdle(0,15000)}
+      var first=S.n===0,job=buildJob(jobs[i].m,cfg,first,jobs[i].r.H);
+      job.warn.concat(jobs[i].r.warn).forEach(function(w){log('⚠ #'+(i+1)+' '+w)});
+      log('label '+(i+1)+'/'+jobs.length+' first='+first+' y='+job.y+' bitmap='+jobs[i].m.wb+'x'+jobs[i].m.h+' qr="'+jobs[i].it.qr.slice(0,40)+'"');
+      if(i===0)log('head: '+String.fromCharCode.apply(null,job.pre.subarray(0,job.head)).replace(/\r\n/g,' ⏎ '));
+      await sendBytes(job.pre,'data#'+(i+1),cfg);
+      await sleep(200);
+      await sendBytes(job.post,'print#'+(i+1),cfg);
+      S.n++;done++;prog.value=done;
+      if(i<jobs.length-1||S.statusOK){
+        var w0=performance.now();
+        if(S.statusOK){await sleep(700);await pollIdle(300,20000)}
+        if(!S.statusOK){var rest=cfg.minwait-(performance.now()-w0);if(rest>0)await sleep(rest)}
+        log('label '+(i+1)+' finished waiting '+Math.round(performance.now()-w0)+'ms')}
+    }
+    if(done===jobs.length)msg('چاپ '+done+' لیبل تمام شد.','ok');
+  }catch(e){log('RUN ERROR '+e.name+': '+e.message);msg('خطا بعد از '+done+' لیبل: '+e.message+' — اگر پرینتر گیر کرد خاموش/روشنش کن.','er')}
+  S.busy=false;uiState();log('=== run end: printed '+done+'/'+jobs.length)}
+
+/* ---------- report ---------- */
+function report(){
+  var cfg;try{cfg=getCfg()}catch(e){cfg={}}
+  var h=['label-qr '+VER+' report','time: '+new Date().toISOString(),'UA: '+navigator.userAgent,
+    'device: '+(S.dev?(S.dev.name||'?'):'-')+' connected='+!!(S.dev&&S.dev.gatt&&S.dev.gatt.connected),
+    'chars: '+S.props,'writeMode: '+S.wm+' statusPolling: '+S.statusOK,'labelsSinceConnect: '+S.n,
+    'settings: '+JSON.stringify(cfg),'--- log ---'];
+  return h.concat(LOG).join('\n')}
+async function copyReport(){var t=report();
+  try{await navigator.clipboard.writeText(t);msg('گزارش کپی شد.','ok');return}catch(e){}
+  var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');msg('گزارش کپی شد.','ok')}catch(e){msg('کپی نشد؛ لاگ را دستی انتخاب کن.','er')}ta.remove()}
+
+/* ---------- init ---------- */
+function init(){
+  fillUI(loadCfg(),false);
+  $('bConn').onclick=connect;$('bDisc').onclick=disconnect;$('bPrint').onclick=run;
+  $('bStop').onclick=function(){S.stop=true;msg('بعد از لیبل جاری متوقف می‌شود…','wa')};
+  $('bCopy').onclick=copyReport;$('bClear').onclick=function(){LOG.length=0;$('log').textContent=''};
+  $('bReset').onclick=function(){var keep=$('lines').value;fillUI(null,true);$('lines').value=keep;saveCfg();drawPreview()};
+  for(var k in FIELDS){$(k).addEventListener('input',function(){saveCfg();schedulePreview()});$(k).addEventListener('change',function(){saveCfg();schedulePreview()})}
+  document.addEventListener('visibilitychange',function(){log('page '+document.visibilityState)});
+  log('label-qr '+VER+' ready');drawPreview();uiState()}
+if(typeof window!=='undefined'){window.__lbl={QR:QR,renderLabel:renderLabel,toMono:toMono,buildJob:buildJob,getCfg:getCfg};}
+init();
+})();
+</script>
+</body>
+</html>
