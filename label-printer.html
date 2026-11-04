@@ -75,7 +75,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۲ • PT-260 • TSPL</small></div>
+  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۳ • PT-260 • TSPL</small></div>
   <span class="pill" id="st">متصل نیست</span>
   <button id="bConn">اتصال</button>
 </div></header>
@@ -125,6 +125,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   </div>
   <button type="button" id="bSkip" style="width:100%">بین لیبل‌ها لیبل خالی می‌آید</button>
   <button type="button" id="bPrep" style="width:100%;margin-top:8px">آماده‌سازی رول (یک لیبل جلو می‌رود)</button>
+  <button type="button" id="bRollDef" style="width:100%;margin-top:8px">برگرداندن تنظیم این رول به پیش‌فرض</button>
   <p class="hint">«بالاتر/پایین‌تر» از لیبل <b>بعدی</b> اثر می‌کند. «لیبل خالی می‌آید» طول چاپ را ۱٫۵ میلی‌متر کوتاه می‌کند. «آماده‌سازی رول» را بعد از گذاشتن رول تازه، باز کردن در پرینتر یا جلو دادن کاغذ با دکمهٔ خود پرینتر بزن. هر رول تنظیم خودش را جدا نگه می‌دارد.</p>
 </section>
 
@@ -269,6 +270,10 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
     <div class="row">
       <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
       <button type="button" id="bMFeed">فید دستی کاغذ</button>
+    </div>
+    <div class="row">
+      <label>ارتفاع واقعی لیبل (mm؛ فقط ESC/POS)<input type="number" id="elh" value="40" min="10" max="120" step="0.1" inputmode="decimal" data-save></label>
+      <label>گام واقعی لیبل (mm؛ فقط ESC/POS)<input type="number" id="epitch" value="42.4" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
     </div>
     <div class="row"><label>فاصلهٔ سر چاپ تا لبهٔ برش (mm)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
     <div class="row">
@@ -415,7 +420,7 @@ function analyzeGray(gray, w, h){
   return { grid: true, cells, cols: cr.length, rows: rr.length };
 }
 
-const LH = () => Math.max(10, +$('lh').value || 30);
+const LH = () => Math.max(10, +(TSPL.on() ? $('lh').value : ($('elh').value || $('lh').value)) || 30);
 const LHD = () => Math.round(LH() * 8);
 const lcan = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); return c; };
 function drawQR(cv, mods, N, x0, y0, wMax, hMax, quiet, even){
@@ -640,7 +645,7 @@ async function buildPage(i){ return bitsOf(await buildCanvas(i), 0); }
 /* ---------- ESC/POS raster (GS v 0) ---------- */
 function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
 function trailFeed(n, h){ const pd = PITCHD(); return Math.max(0, Math.round(n * pd) - Math.round((n - 1) * pd) - h); }
-const PITCHD = () => Math.max(10, +$('pitch').value || 39) * 8, HEADD = () => Math.round(Math.max(0, +$('head').value || 0) * 8);
+const PITCHD = () => Math.max(10, +(TSPL.on() ? $('pitch').value : ($('epitch').value || $('pitch').value)) || 39) * 8, HEADD = () => Math.round(Math.max(0, +$('head').value || 0) * 8);
 const toStart = () => { const P = Math.round(PITCHD()), r = HEADD() % P; return r ? P - r : 0; };
 const bandRows = () => Math.max(1, Math.min(3, Math.round(+$('band').value || 3)));
 function band(bits, y0, r){ return concat([new Uint8Array([0x1D, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, r & 255, r >> 8]), bits.subarray(y0 * BYTES, (y0 + r) * BYTES)]); }
@@ -658,7 +663,7 @@ function blankFrames(dots){ const fr = [], r = bandRows(); for (let y = 0; y < d
 // وقتی فعال است، هر لیبل به‌صورت یک job کامل TSPL فرستاده می‌شود:
 //   SIZE/GAP/DIRECTION/REFERENCE/CLS + BITMAP(های نواری) + PRINT
 // مزیت: پرینتر خودش کاغذ را روی لیبل بعدی تنظیم می‌کند → نیازی به align و کالیبراسیون نیست.
-const TSPL = { on: () => !!($('tsplMode') && $('tsplMode').checked) };
+var TSPL = { on: () => !!($('tsplMode') && $('tsplMode').checked) };
 
 const tsplOpts = () => {
   const num = id => { const v = $(id).value; return v === '' || isNaN(+v) ? null : +v; };
@@ -736,9 +741,9 @@ function tsplBatch(list, ov){
 
 function updateTsplUi(){
   const on = TSPL.on(), busy = job.running;
-  ['head','mfeed'].forEach(id => { if ($(id)) $(id).disabled = on; });
+  ['head','mfeed','elh','epitch'].forEach(id => { if ($(id)) $(id).disabled = on; });
   ['bMFeed','bHdUp','bHdDn'].forEach(id => { if ($(id)) $(id).disabled = on || busy; });
-  ['bUp','bDn','bTspl','bRx','bPrep','bSkip','bFeedUp','bFeedDn'].forEach(id => { if ($(id)) $(id).disabled = busy; });
+  ['bUp','bDn','bTspl','bRx','bPrep','bSkip','bFeedUp','bFeedDn','bRollDef'].forEach(id => { if ($(id)) $(id).disabled = busy; });
   ['bCal','bSheetS','bSheetY','bSheetD','bSheetP','bExp','bVar'].forEach(id => { if ($(id)) $(id).disabled = !on || busy; });
   ['tinv','homeStart','toff','calcmd','tshift','tfeed','ffmode','dens','spd','tband','clsmode','hdmode','rsm','expv','cmpmode','ppw'].forEach(id => { if ($(id)) $(id).disabled = !on; });
 }
@@ -851,12 +856,14 @@ async function gate(){
   if (job.stop) throw STOP;
   while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
 }
+// داخل یک لیبل: لغو صبر می‌کند تا همین لیبل کامل فرستاده شود (نیمه‌کاره نمی‌ماند)
+async function gateMid(){ while (job.paused && !job.stop) await sleep(200); }
 const isPr = (fr, i) => fr.printSet ? fr.printSet.has(i) : fr.printAt === i;
 async function sendAll(frames, st, meta){
   let tick = Date.now() + (meta && meta.hold ? 1500 : 0);
   const hmax = frames.hdr ? Math.max(...frames.hdr) : -1;
   while (st.i < frames.length) {
-    await gate();
+    await gateMid();
     if (frames.hdFirst && frames.hdr && frames.hdr.has(st.i) && HEAD.ep === connEpoch && HEAD.key === frames.hkey) { st.i++; continue; }
     const f = frames[st.i];
     try { await write(f.slice()); }
@@ -976,7 +983,7 @@ function applyPdfMode(){
 function afterLoad(note){
   const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
   $('to').value = src.count; $('to').max = $('from').max = src.count;
-  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
+  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' فرستاده شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
   else $('from').value = 1;
   $('info').textContent = note; log('فایل: ' + src.type + ' / ' + src.count + ' لیبل');
   updatePreview(); updateStartLabel();
@@ -1016,11 +1023,14 @@ function updateStartLabel(){
   b.textContent = n ? 'چاپ ' + n.toLocaleString('fa-IR') + ' لیبل' : 'محدودهٔ برگ‌ها نامعتبر است';
 }
 ['from', 'to', 'copies'].forEach(id => { $(id).addEventListener('input', updateStartLabel); $(id).addEventListener('change', updateStartLabel); });
+const lockables = () => document.querySelectorAll('#advbox input, #advbox select, #psize, #from, #to, #copies');
 function ui(run){
+  if (!run) lockables().forEach(el => { el.disabled = false; });
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
   $('bConn').disabled = run; $('bMFeed').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; $('bNext').hidden = true; $('bAgain').hidden = true; }
   updateTsplUi();
+  if (run) lockables().forEach(el => { el.disabled = true; });
 }
 const manualStep = () => $('stepmode').value === 'manual';
 let nextHit = false;
@@ -1047,9 +1057,9 @@ async function startJob(){
   const copies = Math.max(1, +$('copies').value || 1);
   if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
   if (LAST.sig === src.sig && LAST.p >= from) {
-    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
+    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً فرستاده شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
       from = LAST.p + 1; $('from').value = from;
-      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً چاپ شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
+      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً فرستاده شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
     }
   }
   job.running = true; job.paused = false; job.stop = false; ui(true); beepInit();
@@ -1059,7 +1069,7 @@ async function startJob(){
   const mode = TSPL.on() ? 'TSPL (native)' : 'ESC/POS GS v 0 نواری';
   log('پیش‌بررسی: ' + mode + ' • CH1 • ارسال تأییدی • سر چاپ تا برش ' + ($('head').value || 0) + ' mm • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm (' + LHD() + ' نقطه)، اتصال تازه ≤ ' + ($('fresh').value || 0) + ' s • نواری: ' + bandRows() + ' ردیف، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش') + ' • ' + settingsLine());
   const prep = p => buildCanvas(p - 1);
-  let curP = from, sentOfPage = 0;
+  let curP = from, sentOfPage = 0, lastSentP = 0, pageDone = false, rejectFirst = false;
   try {
     big('در حال اتصال به پرینتر…', 'warn');
     if (!isUp()) await connect();
@@ -1073,7 +1083,7 @@ async function startJob(){
     if (TSPL.on()) { await ensureConnected({ label: 'بررسی پرینتر' }); await waitReady(); }
     let nxt = prep(from), printedAny = false; nxt.catch(() => {});
     for (let p = from; p <= to; p++) {
-      curP = p;
+      curP = p; pageDone = false;
       await gate();
       PS.label = 'برگ ' + p + ' از ' + to;
       big('آماده‌سازی ' + PS.label + '…', 'run');
@@ -1088,9 +1098,9 @@ async function startJob(){
         const yo2 = printedAny ? Math.round((+$('yoff2').value || 0) * 8) : 0, bh = bitsOf(data, yo2);
         const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h) : jobFrames(bh.bits, bh.h, p);
         if (frames.info) log(meta.label + ' • داده: ' + frames.info.bytes + ' بایت در ' + frames.info.frames + ' بسته' + (frames.info.skipped ? ' (' + frames.info.skipped + ' نوار سفید حذف شد)' : '') + (printedAny ? ' • لیبل دوم به بعد' : ' • لیبل اول نوبت') + (yo2 ? ' • جابه‌جایی اضافه ' + yo2 + ' نقطه' : ''));
-        await printUnit(frames, meta); printedAny = true; sentOfPage++;
+        await printUnit(frames, meta); printedAny = true; sentOfPage++; lastSentP = p; pageDone = (c === copies);
         { const k = PS.disc - d0; log('حسابداری (فقط ارسال؛ چاپ تأیید نشده): ' + meta.label + ' • قطع اتصال حین ارسال: ' + k + ' • مدت ارسال: ' + ((Date.now() - tl0) / 1000).toFixed(1) + ' ثانیه'); if (k > 0) PS.dropL.push(meta.label + ' (×' + k + ')'); }
-        if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); }
+        if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); curP = p + 1; }
         done++; $('prog').value = done; statsLine();
         if (!gateDone && total > 1 && !isOk()) {
           gateDone = true;
@@ -1102,7 +1112,7 @@ async function startJob(){
             big('✋ لیبل اول چاپ شد؛ آن را روی کاغذ ببین و تأیید کن (TSPL)', 'warn');
           }
           await sleep(1500);
-          if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف؛ بعد در کارت ۳ با «چاپ ۱ میلی‌متر بالاتر/پایین‌تر» اصلاح کن و دوباره «شروع چاپ» بزن')) { job.stop = true; throw STOP; }
+          if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف؛ بعد در کارت ۳ با «چاپ ۱ میلی‌متر بالاتر/پایین‌تر» اصلاح کن و دوباره «شروع چاپ» بزن')) { job.stop = true; rejectFirst = true; throw STOP; }
           markOk(); log('هم‌ترازی تأیید شد: ' + profKey());
           await align('هم‌ترازی دوباره بعد از بررسی');
         }
@@ -1126,16 +1136,25 @@ async function startJob(){
     log('خلاصه: لیبل‌های همراه با قطع اتصال = ' + (PS.dropL.length ? PS.dropL.join('، ') : 'هیچ'));
     big('ارسال انجام شد (' + total + ' لیبل) — چاپ فیزیکی را خود اپ نمی‌تواند ببیند؛ لیبل‌ها را روی کاغذ نگاه کن. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec + (PS.susp.size ? ' — ⚠ قطع در میانهٔ ارسال: ' + [...PS.susp].join('، ') + ' (روی کاغذ بررسی کن)' : ''), PS.susp.size ? 'warn' : 'ok'); beep(!PS.susp.size);
   } catch(e){
-    $('from').value = curP;
-    let remNote = '';
-    if (copies > 1 && sentOfPage > 0 && curP === to) {
-      const rem = Math.min(copies, copies - sentOfPage + (e && e.printerErr ? 1 : 0));
-      if (rem > 0 && rem < copies) { $('copies').value = rem; $('copies').dispatchEvent(new Event('change')); remNote = ' • «تعداد کپی» روی ' + rem + ' (باقی‌مانده) گذاشته شد.'; log('کپی باقی‌مانده: ' + rem); }
+    // نقطهٔ ادامه: برگی که هنوز کامل فرستاده نشده؛ اگر کاغذ تمام شد یا لیبل اول رد شد، همان لیبل آخر دوباره
+    const reprint = !!((e && e.printerErr) || rejectFirst) && lastSentP > 0;
+    let resumeP = reprint ? lastSentP : curP, remNote = '';
+    const allSent = !reprint && resumeP > to;
+    if (allSent) { LS.set('pt260p:' + src.sig, '0'); resumeP = to; }
+    if (reprint) { LAST.sig = src.sig; LAST.p = resumeP - 1; LS.set('pt260p:' + src.sig, String(resumeP - 1)); }
+    $('from').value = resumeP;
+    if (!allSent && copies > 1 && resumeP === to) {
+      const sentHere = (reprint && resumeP === lastSentP) ? (pageDone ? copies : sentOfPage) : (resumeP === lastSentP && !pageDone ? sentOfPage : 0);
+      const rem = Math.max(1, Math.min(copies, copies - sentHere + (reprint ? 1 : 0)));
+      if (rem < copies) { $('copies').value = rem; $('copies').dispatchEvent(new Event('change')); remNote = ' • «تعداد کپی» روی ' + rem + ' (باقی‌مانده) گذاشته شد.'; log('کپی باقی‌مانده: ' + rem); }
     }
-    if (e && e.printerErr) { big('⛔ ' + e.message + '. مشکل را برطرف کن، اگر لازم شد «آماده‌سازی رول» را بزن و بعد «شروع چاپ»؛ از برگ ' + curP + ' ادامه می‌دهد (اگر این برگ کامل چاپ شده بود، «از برگ» را ' + (curP + 1) + ' کن).', 'bad'); log('ERR پرینتر: ' + e.message); beep(false); }
-    else if (e && e.ambig) { big('⚠ ارسال دستور چاپ ' + (PS.label || '') + ' نامعلوم ماند. لیبل را روی کاغذ ببین: اگر چاپ شده «از برگ» را ' + (curP + 1) + ' بگذار، اگر چاپ نشده روی ' + curP + ' بماند؛ بعد «شروع چاپ».', 'warn'); log('ERR ' + errText(e)); beep(false); }
-    else if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'warn');
-    else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — برگ‌های ۱ تا ' + (curP - 1) + ' فرستاده شده‌اند؛ با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); beep(false); }
+    const curPx = resumeP;
+    if (allSent) { big('همهٔ ' + total + ' لیبل فرستاده شده بود؛ چیزی جا نماند.', 'ok'); }
+    else if (e && e.printerErr) { big('⛔ ' + e.message + '. مشکل را برطرف کن، اگر لازم شد «آماده‌سازی رول» را بزن و بعد «شروع چاپ»؛ آخرین لیبل (برگ ' + curPx + ') دوباره فرستاده می‌شود. اگر روی کاغذ کامل بود، «از برگ» را ' + (curPx + 1) + ' کن.', 'bad'); log('ERR پرینتر: ' + e.message); beep(false); }
+    else if (e && e.ambig) { big('⚠ ارسال دستور چاپ ' + (PS.label || '') + ' نامعلوم ماند. لیبل را روی کاغذ ببین: اگر چاپ شده «از برگ» را ' + (curPx + 1) + ' بگذار، اگر چاپ نشده روی ' + curPx + ' بماند؛ بعد «شروع چاپ».', 'warn'); log('ERR ' + errText(e)); beep(false); }
+    else if (e === STOP && rejectFirst) big('⏹ متوقف شد. جای چاپ را در کارت ۳ اصلاح کن و «شروع چاپ» را بزن؛ همان لیبل اول دوباره فرستاده می‌شود.', 'warn');
+    else if (e === STOP) big('⏹ لغو شد بعد از ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curPx + ' ادامه می‌دهد', 'warn');
+    else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — با «شروع چاپ» از برگ ' + curPx + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); beep(false); }
     if (remNote) $('ptxt').textContent += remNote;
   } finally {
     job.running = false; ui(false); statsLine(); updateStartLabel();
@@ -1410,14 +1429,20 @@ $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('
 
 // سایز لیبل: هر سایز ارتفاع، گام، جابه‌جایی‌ها، OFFSET، SHIFT، فید و FORMFEED خودش را جدا ذخیره می‌کند
 (function(){
-  const PSF = ['lh', 'pitch', 'yoff', 'yoff2', 'toff', 'tshift', 'tfeed', 'ffmode'];
-  const PSDEF = { A: { lh: '29', pitch: '35.6', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' }, B: { lh: '34.5', pitch: '39', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' } };
+  const PSF = ['lh', 'pitch', 'yoff', 'yoff2', 'toff', 'tshift', 'tfeed', 'ffmode', 'elh', 'epitch'];
+  const PSDEF = { A: { elh: '34.5', epitch: '39', lh: '29', pitch: '35.6', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' }, B: { elh: '40', epitch: '42.4', lh: '34.5', pitch: '39', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' } };
   const key = k => 'pt260:size:' + k, sel = $('psize');
   const save = k => { const o = {}; PSF.forEach(id => o[id] = $(id).value); LS.set(key(k), JSON.stringify(o)); };
   const load = k => { let o = null; try { o = JSON.parse(LS.get(key(k)) || 'null'); } catch(e){} o = o || {}; PSF.forEach(id => { $(id).value = o[id] !== undefined ? o[id] : PSDEF[k][id]; }); sched(); };
   let cur = sel.value; if (!PSDEF[cur]) { cur = 'B'; sel.value = 'B'; }
   if (!LS.get(key(cur))) { PSF.forEach(id => { $(id).value = PSDEF[cur][id]; }); save(cur); } else load(cur);
   PSF.forEach(id => $(id).addEventListener('change', () => save(cur)));
+  $('bRollDef').onclick = () => {
+    if (!confirm('طول چاپ، گام فرمان، OFFSET و جابه‌جایی‌های ' + (cur === 'A' ? 'سایز ۱' : 'سایز ۲') + ' به پیش‌فرض برگردد؟')) return;
+    PSF.forEach(id => { $(id).value = PSDEF[cur][id]; }); save(cur); sched();
+    ['toff', 'lh'].forEach(id => $(id).dispatchEvent(new Event('change')));
+    log('تنظیم رول ' + cur + ' به پیش‌فرض برگشت: ' + JSON.stringify(PSDEF[cur]));
+  };
   sel.addEventListener('change', () => { save(cur); cur = sel.value; load(cur); log('سایز لیبل: ' + (cur === 'A' ? 'سایز ۱' : 'سایز ۲') + ' — ارتفاع ' + $('lh').value + '، گام ' + $('pitch').value); });
 })();
 
@@ -1451,12 +1476,13 @@ $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('
 // همگام‌سازی UI با تغییر حالت چاپ
 (function(){
   const el = $('tsplMode');
-  if (el) { el.addEventListener('change', () => { updateTsplUi(); log('حالت چاپ: ' + (TSPL.on() ? 'TSPL' : 'ESC/POS')); }); updateTsplUi(); }
+  if (el) { const verTxt = () => { $('ver').textContent = 'نسخه ۵۳ • PT-260 • ' + (TSPL.on() ? 'TSPL' : 'ESC/POS (قدیمی)'); }; verTxt();
+  el.addEventListener('change', () => { updateTsplUi(); verTxt(); sched(); log('حالت چاپ: ' + (TSPL.on() ? 'TSPL' : 'ESC/POS')); }); updateTsplUi(); }
 })();
 (function(){
   const op = $('opmode'), apply = () => document.body.classList.toggle('op', !!op.checked);
   op.addEventListener('change', apply); apply();
-  log('نسخه ۵۲ • ' + (navigator.userAgent || '').slice(0, 90));
+  log('نسخه ۵۳ • ' + (navigator.userAgent || '').slice(0, 90));
   updateTsplUi();
 })();
 </script>
