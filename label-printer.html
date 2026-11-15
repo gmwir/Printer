@@ -76,7 +76,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۶ • PT-260 • TSPL</small></div>
+  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۷ • PT-260 • TSPL</small></div>
   <span class="pill" id="st">متصل نیست</span>
   <button id="bConn">اتصال</button>
 </div></header>
@@ -129,6 +129,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
     <label>مهلت فعال‌سازی (ماه)<input type="number" id="gmonths" value="6" min="1" max="60" inputmode="numeric" data-save></label>
   </div>
   <label style="margin-top:8px">مهلت فعال‌سازی تا (شمسی؛ خودکار، قابل تغییر)<input type="text" id="gdead" inputmode="numeric" dir="ltr"></label>
+  <label style="margin-top:8px">غلظت چاپ این لیبل (۰ تا ۱۵؛ اگر کاغذ گیر می‌کند کمتر، اگر کم‌رنگ است بیشتر)<input type="number" id="gdens" value="8" min="0" max="15" inputmode="numeric" data-save></label>
   <button class="p xl" id="bGUse" type="button" style="margin-top:12px">ساخت لیبل با کد یکتا</button>
   <details>
     <summary>ویرایش نوشته‌های لیبل</summary>
@@ -825,12 +826,14 @@ function gmwLabel(it){
   const wrap = (t, maxW, fs, n, w) => { x.font = F(fs, w); return t ? wrapText(x, t, maxW, n) : []; };
   const rr = (x0, y0, w, h, r) => { x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); };
   // نوار بالا
-  x.fillStyle = '#000'; x.fillRect(0, 0, W, 56);
-  T('GMW', L, 29, 40, { fill: '#fff', dir: 'ltr', align: 'left', fam: '"Arial Black", "Helvetica Neue", Arial, sans-serif', w: '900' });
-  { const t = v('gtop'); if (t) T(t, R, 29, fit(t, CW - 120, 20, 12), { fill: '#fff' }); }
-  let y = 68;
+  T('GMW', L, 26, 40, { dir: 'ltr', align: 'left', fam: '"Arial Black", "Helvetica Neue", Arial, sans-serif', w: '900' });
+  { const t = v('gtop'); if (t) T(t, R, 27, fit(t, CW - 120, 21, 12)); }
+  x.fillStyle = '#000'; x.fillRect(0, 50, W, 4);
+  let y = 62;
   // تیتر
-  wrap(v('ghead'), CW, 34, 3).forEach(l => { T(l, R, y + 22, 34); y += 44; }); y += 6;
+  { const t = v('ghead'), f1 = t ? fit(t, CW, 34, 26) : 0; x.font = F(f1);
+    if (t && x.measureText(t).width <= CW) { T(t, R, y + 20, f1); y += 42; } else wrap(t, CW, 32, 3).forEach(l => { T(l, R, y + 20, 32); y += 40; });
+    y += 4; }
   // کادر مزایا
   { const title = v('gbt'), items = $('gben').value.split(/\n+/).map(t => t.trim()).filter(Boolean).slice(0, 8), tw = CW - 24 - 22;
     const rows = items.map(t => wrap(t, tw, 20, 3, '600')); let h = 12 + (title ? 34 : 0); rows.forEach(r => h += r.length * 28 + 6); h += 6;
@@ -841,7 +844,7 @@ function gmwLabel(it){
       y += h + 12;
     } }
   // نوار هشدار
-  { const ls = wrap(v('gwarn'), CW - 20, 20, 3); if (ls.length) { const h = ls.length * 28 + 16; x.fillStyle = '#000'; rr(L, y, CW, h, 10); x.fill(); ls.forEach((l, i) => T(l, MID, y + 8 + 14 + i * 28, 20, { fill: '#fff', align: 'center' })); y += h + 12; } }
+  { const ls = wrap(v('gwarn'), CW - 20, 20, 3); if (ls.length) { const h = ls.length * 28 + 16; x.lineWidth = 5; x.strokeStyle = '#000'; rr(L + 1, y + 1, CW - 2, h - 2, 10); x.stroke(); ls.forEach((l, i) => T(l, MID, y + 8 + 14 + i * 28, 20, { align: 'center' })); y += h + 12; } }
   // QR
   { const t = v('gscan'); if (t) { T(t, MID, y + 14, fit(t, CW, 23, 13), { align: 'center' }); y += 34; } }
   let url = v('gurl'); const host = url.replace(/^https?:\/\//i, '').replace(/[\/?#].*$/, '');
@@ -1403,7 +1406,8 @@ async function startJob(){
         const d0 = PS.disc, tl0 = Date.now();
         if (manualStep() && printedAny) { big('اتصال تازه قبل از ' + meta.label + '…', 'run'); await forceFresh(meta.label); await sleep(1200); meta.skipFresh = true; }
         const yo2 = printedAny ? Math.round((+$('yoff2').value || 0) * 8) : 0, bh = bitsOf(data, yo2);
-        const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h, contOv(p === to && c === copies)) : jobFrames(bh.bits, bh.h, p);
+        const gov = src.type === 'gmw' && $('gdens').value !== '' && !isNaN(+$('gdens').value) ? { dens: Math.max(0, Math.min(15, Math.round(+$('gdens').value))) } : null;
+        const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h, gov ? Object.assign({}, contOv(p === to && c === copies) || {}, gov) : contOv(p === to && c === copies)) : jobFrames(bh.bits, bh.h, p);
         if (frames.info) log(meta.label + ' • داده: ' + frames.info.bytes + ' بایت در ' + frames.info.frames + ' بسته' + (frames.info.skipped ? ' (' + frames.info.skipped + ' نوار سفید حذف شد)' : '') + (printedAny ? ' • لیبل دوم به بعد' : ' • لیبل اول نوبت') + (yo2 ? ' • جابه‌جایی اضافه ' + yo2 + ' نقطه' : ''));
         await printUnit(frames, meta); printedAny = true; sentOfPage++;
         { const k = PS.disc - d0; log('حسابداری (فقط ارسال؛ چاپ تأیید نشده): ' + meta.label + ' • قطع اتصال حین ارسال: ' + k + ' • مدت ارسال: ' + ((Date.now() - tl0) / 1000).toFixed(1) + ' ثانیه'); if (k > 0) PS.dropL.push(meta.label + ' (×' + k + ')'); }
@@ -1849,7 +1853,7 @@ syncCont();
 (function(){
   const op = $('opmode'), apply = () => document.body.classList.toggle('op', !!op.checked);
   op.addEventListener('change', apply); apply();
-  log('نسخه ۵۶ • ' + (navigator.userAgent || '').slice(0, 90));
+  log('نسخه ۵۷ • ' + (navigator.userAgent || '').slice(0, 90));
   updateTsplUi();
 })();
 </script>
