@@ -49,7 +49,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 .row>button{flex:1 1 auto}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
 label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut);flex:1 1 120px;min-width:0}
-input[type=number],select{font:inherit;font-size:16px;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--soft);color:var(--tx);width:100%;font-variant-numeric:tabular-nums}
+input[type=number],input[type=text],select{font:inherit;font-size:16px;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--soft);color:var(--tx);width:100%;font-variant-numeric:tabular-nums}
 .pill{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--soft);font-size:13px;line-height:1.6}
 .pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
 .pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.run{background:var(--run-bg);color:var(--run)}
@@ -60,6 +60,7 @@ progress{width:100%;height:10px;margin-top:12px;accent-color:var(--pri)}
 .drop b{font-weight:600}.drop span{color:var(--mut);font-size:13px;display:block}
 #pv{width:100%;max-width:384px;image-rendering:pixelated;border:1px solid var(--line);border-radius:6px;background:#fff;display:block;margin:12px auto 0}
 textarea{width:100%;height:180px;font:12px/1.45 ui-monospace,Menlo,monospace;direction:ltr;background:var(--soft);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px}
+textarea.fa{height:130px;font:15px/1.7 Tahoma,sans-serif;direction:rtl}
 details>summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;justify-content:space-between}
 details>summary::-webkit-details-marker{display:none}
 details>summary::after{content:"＋";color:var(--mut);font-weight:400}
@@ -75,7 +76,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۳ • PT-260 • TSPL</small></div>
+  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۶ • PT-260 • TSPL</small></div>
   <span class="pill" id="st">متصل نیست</span>
   <button id="bConn">اتصال</button>
 </div></header>
@@ -87,13 +88,74 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   <h2><span class="n">۱</span>رول و فایل</h2>
   <label>رول داخل پرینتر
     <select id="psize" data-save>
-      <option value="A">سایز ۱ — رول دیجی‌کالا</option>
+      <option value="D">سایز ۳ — دیجی‌کالا ۵۱×۳۴ (هم‌اندازه با Dlabel)</option>
+      <option value="A">سایز ۱ — رول دیجی‌کالا (قدیمی، ۲۹ mm)</option>
       <option value="B" selected>سایز ۲ — رول ۵۰×۴۰ (گارانتی)</option>
+      <option value="E">سایز ۴ — پیوسته ۵۷ mm، پشت‌چسبدار (برچسب گارانتی)</option>
     </select></label>
   <label class="drop" style="margin-top:12px"><span style="font-size:22px;color:inherit">📄</span><div><b id="fname">انتخاب فایل</b><span>PDF (دیجی‌کالا یا طرح آماده) یا CSV</span></div><input type="file" id="file" accept="application/pdf,.csv,text/csv,text/plain"></label>
   <div class="row"><span class="pill" id="info">فایلی انتخاب نشده (PDF یا CSV)</span></div>
   <canvas id="pv" width="384" height="10"></canvas>
 </section>
+
+<details class="card" id="wbox">
+  <summary>ساخت برچسب گارانتی (رول پیوسته ۵۷ mm)</summary>
+  <p class="hint">برچسب با طول متناسب با نوشته‌ها ساخته می‌شود و روی رول پیوسته پشت‌چسبدار چاپ می‌شود. بعد از «استفاده از این برچسب»، تعداد را در «تعداد کپی» بگذار.</p>
+  <div class="row">
+    <label>نام برند / فروشگاه<input type="text" id="wbrand" value="امیران یدک" data-save></label>
+    <label>عنوان بزرگ<input type="text" id="wtitle" value="گارانتی" data-save></label>
+  </div>
+  <div class="row">
+    <label>مدت (ماه؛ ۰ = بدون دایره‌ی مدت)<input type="number" id="wmonths" value="12" min="0" max="120" inputmode="numeric" data-save></label>
+    <label>تاریخ شروع (شمسی)<input type="text" id="wstart" inputmode="numeric" placeholder="۱۴۰۵/۰۸/۱۹" dir="ltr"></label>
+  </div>
+  <label style="margin-top:8px">شرح کوتاه، مثلاً «تعویض در صورت عیب تولید» (اختیاری)<input type="text" id="wdesc" data-save></label>
+  <label style="margin-top:8px">نام کالا<input type="text" id="wprod" data-save></label>
+  <div class="row">
+    <label>کد کالا<input type="text" id="wcode" dir="ltr" data-save></label>
+    <label>شماره فاکتور / سریال<input type="text" id="wserial" dir="ltr" data-save></label>
+  </div>
+  <label style="margin-top:8px">تلفن / نشانی پشتیبانی (اختیاری)<input type="text" id="wcontact" data-save></label>
+  <label style="margin-top:8px">متن QR، مثلاً لینک (خالی = بدون QR)<input type="text" id="wqr" dir="ltr" value="https://amiran-yadak.ir" data-save></label>
+  <button class="p xl" id="bWUse" type="button" style="margin-top:12px">استفاده از این برچسب</button>
+</details>
+
+<details class="card" id="gbox">
+  <summary>لیبل فعال‌سازی GMW با کد یکتا (رول پیوسته)</summary>
+  <p class="hint">هر لیبل یک کد یکتای جدا می‌گیرد و با نام قطعه و مهلت در «دفتر کدها» روی همین گوشی ذخیره می‌شود. همهٔ نوشته‌ها قابل ویرایش‌اند.</p>
+  <label>نام قطعه<input type="text" id="gprod" placeholder="مثلاً لنت ترمز جلو سانتافه" data-save></label>
+  <div class="row">
+    <label>تعداد لیبل (هر کدام یک کد)<input type="number" id="gcount" value="1" min="1" max="300" inputmode="numeric"></label>
+    <label>مهلت فعال‌سازی (ماه)<input type="number" id="gmonths" value="6" min="1" max="60" inputmode="numeric" data-save></label>
+  </div>
+  <label style="margin-top:8px">مهلت فعال‌سازی تا (شمسی؛ خودکار، قابل تغییر)<input type="text" id="gdead" inputmode="numeric" dir="ltr"></label>
+  <button class="p xl" id="bGUse" type="button" style="margin-top:12px">ساخت لیبل با کد یکتا</button>
+  <details>
+    <summary>ویرایش نوشته‌های لیبل</summary>
+    <label style="margin-top:8px">نوار بالا<input type="text" id="gtop" value="فعال‌سازی الزامی است" data-save></label>
+    <label style="margin-top:8px">تیتر بزرگ<input type="text" id="ghead" value="این قطعه هنوز فعال نشده است!" data-save></label>
+    <label style="margin-top:8px">عنوان کادر مزایا<input type="text" id="gbt" value="با فعال‌سازی دریافت می‌کنید:" data-save></label>
+    <label style="margin-top:8px">مزایا (هر خط یک مورد)<textarea id="gben" class="fa" data-save>گارانتی مدت مصرف قطعه
+تعویض یا عودت وجه + اجرت نصب
+تأیید نهایی اصالت قطعه
+باشگاه مشتریان ویژه: پک اقتصادی لنت و روغن + پیامک تخفیف</textarea></label>
+    <label style="margin-top:8px">نوار هشدار<input type="text" id="gwarn" value="بدون فعال‌سازی: نه گارانتی، نه تأیید اصالت، نه خدمات" data-save></label>
+    <label style="margin-top:8px">دعوت به اسکن<input type="text" id="gscan" value="اسکن کن و همین حالا فعال کن" data-save></label>
+    <label style="margin-top:8px">آدرس سایت (برای QR)<input type="text" id="gurl" dir="ltr" value="https://gmw.ir" data-save></label>
+    <label class="chk"><input type="checkbox" id="gqc" data-save checked> کد یکتا داخل QR هم باشد (آدرس?c=کد)</label>
+    <label style="margin-top:8px">نوشتهٔ زیر کد<input type="text" id="gnote" value="هر کد فقط یک‌بار فعال می‌شود" data-save></label>
+  </details>
+  <details>
+    <summary>دفتر کدها</summary>
+    <div class="row"><span class="pill" id="gstat">—</span></div>
+    <div id="glist" class="hint" style="direction:rtl"></div>
+    <div class="row">
+      <button type="button" id="bGCsv">خروجی CSV</button>
+      <button type="button" id="bGCopy">کپی همه</button>
+    </div>
+    <textarea id="gdump" readonly hidden></textarea>
+  </details>
+</details>
 
 <section class="card">
   <h2><span class="n">۲</span>چاپ</h2>
@@ -116,7 +178,20 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   <p class="hint">هنگام چاپ Bluefy را باز و صفحه را روشن نگه دار. اپ فقط ارسال را تأیید می‌کند؛ چاپ روی کاغذ را خودت ببین.</p>
 </section>
 
-<section class="card">
+<section class="card" id="contCard" hidden>
+  <h2><span class="n">۳</span>رول پیوسته ۵۷ mm</h2>
+  <div class="row">
+    <label>فید بعد از آخرین لیبل برای کندن (mm)<input type="number" id="tear" value="10" min="0" max="40" step="0.5" inputmode="decimal"></label>
+    <label>خط برش بین لیبل‌ها
+      <select id="cutln">
+        <option value="1" selected>دارد (برای PDF و CSV)</option>
+        <option value="0">ندارد</option>
+      </select></label>
+  </div>
+  <p class="hint">روی رول پیوسته سنسور گپ نیست، پس کالیبراسیون و «آماده‌سازی رول» غیرفعال است. هر لیبل به اندازه‌ی طرح خودش چاپ می‌شود و پشت‌سرهم می‌آید؛ بعد از آخرین لیبل کاغذ به اندازه‌ی «فید برای کندن» جلو می‌رود تا بتوانی آن را از لبه‌ی پرینتر ببری. عرض چاپ ۴۸ mm است و وسط کاغذ ۵۷ mm می‌نشیند.</p>
+</section>
+
+<section class="card" id="posCard">
   <h2><span class="n">۳</span>جای چاپ روی این رول</h2>
   <span class="pill" id="feedNow"></span>
   <div class="pos">
@@ -125,7 +200,6 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   </div>
   <button type="button" id="bSkip" style="width:100%">بین لیبل‌ها لیبل خالی می‌آید</button>
   <button type="button" id="bPrep" style="width:100%;margin-top:8px">آماده‌سازی رول (یک لیبل جلو می‌رود)</button>
-  <button type="button" id="bRollDef" style="width:100%;margin-top:8px">برگرداندن تنظیم این رول به پیش‌فرض</button>
   <p class="hint">«بالاتر/پایین‌تر» از لیبل <b>بعدی</b> اثر می‌کند. «لیبل خالی می‌آید» طول چاپ را ۱٫۵ میلی‌متر کوتاه می‌کند. «آماده‌سازی رول» را بعد از گذاشتن رول تازه، باز کردن در پرینتر یا جلو دادن کاغذ با دکمهٔ خود پرینتر بزن. هر رول تنظیم خودش را جدا نگه می‌دارد.</p>
 </section>
 
@@ -134,7 +208,8 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   <div class="row">
     <label>نوع PDF
       <select id="pgmode" data-save>
-        <option value="auto" selected>خودکار (صفحهٔ پهن دیجی‌کالا = دو لیبل؛ شبکهٔ QR؛ وگرنه هر صفحه یک لیبل)</option>
+        <option value="auto" selected>خودکار (صفحهٔ پهن دیجی‌کالا = دو لیبل؛ شبکهٔ QR؛ لیبل کوچک وسط/گوشهٔ صفحه = برش خودکار؛ وگرنه هر صفحه یک لیبل)</option>
+        <option value="crop">فقط برش خودکار لیبل از صفحه (پرینت Safari/پنل دیجی‌کالا)</option>
         <option value="full">هر صفحه = یک لیبل کامل (طرح آماده)</option>
         <option value="split2">هر صفحه = دو لیبل کنار هم (دیجی‌کالا)</option>
       </select></label>
@@ -176,6 +251,11 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
     <label>گام فرمان (mm؛ طول چاپ + GAP)<input type="number" id="pitch" value="39" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
     <label>OFFSET (mm؛ جای ایستادن برای لیبل بعدی)<input type="number" id="toff" value="7" min="-20" max="20" step="0.1" inputmode="decimal" data-save></label>
   </div>
+  <div class="row">
+    <label>عرض لیبل (mm؛ SIZE)<input type="number" id="lw" value="48" min="20" max="120" step="0.1" inputmode="decimal"></label>
+    <label>جابه‌جایی افقی (mm؛ مثبت = راست‌تر)<input type="number" id="xoff" value="0" min="-10" max="10" step="0.1" inputmode="decimal"></label>
+  </div>
+  <p class="hint">سایز ۳ مثل قالب «Digi kala» در Dlabel است: عرض ۵۱، طول ۳۴، فاصلهٔ بین لیبل‌ها ۲ mm (گام = ۳۴ + ۲ = ۳۶) و OFFSET صفر. سر چاپ ۴۸ mm است و تصویر وسط لیبل ۵۱ می‌نشیند؛ اگر چپ/راست کج بود «جابه‌جایی افقی» را عوض کن.</p>
   <p class="hint">این‌ها اندازهٔ واقعی لیبل نیستند. روی این پرینتر، فرمان کوتاه‌تر از لیبل واقعی و OFFSET ۷ تنها ترکیبی بود که لیبل‌ها را بدون لیبل خالی و سرجا چاپ کرد. عرض چاپ همیشه ۴۸ میلی‌متر است.</p>
 
   <details><summary>تنظیم دقیق و ورق‌های تست</summary>
@@ -271,10 +351,6 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
       <label>فید دستی (نقطه؛ ۸ نقطه = ۱ mm)<input type="number" id="mfeed" value="64" min="1" max="1000" inputmode="numeric" data-save></label>
       <button type="button" id="bMFeed">فید دستی کاغذ</button>
     </div>
-    <div class="row">
-      <label>ارتفاع واقعی لیبل (mm؛ فقط ESC/POS)<input type="number" id="elh" value="40" min="10" max="120" step="0.1" inputmode="decimal" data-save></label>
-      <label>گام واقعی لیبل (mm؛ فقط ESC/POS)<input type="number" id="epitch" value="42.4" min="10" max="150" step="0.1" inputmode="decimal" data-save></label>
-    </div>
     <div class="row"><label>فاصلهٔ سر چاپ تا لبهٔ برش (mm)<input type="number" id="head" value="10" min="0" max="60" step="0.5" inputmode="decimal" data-save></label></div>
     <div class="row">
       <button type="button" id="bHdUp">شروع چاپ ۱ mm زودتر</button>
@@ -315,7 +391,7 @@ document.querySelectorAll('[data-save]').forEach(el => {
   if (v !== null) { if (el.type === 'checkbox') el.checked = v === '1'; else el.value = v; }
   el.addEventListener('change', () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
 });
-['yoff','lh','capt','from','pgrot','thr'].forEach(id => $(id).addEventListener('change', sched));
+['yoff','lh','capt','from','pgrot','thr','xoff'].forEach(id => $(id).addEventListener('change', sched));
 if (LS.get('pt260:cfg40') !== '1') { LS.set('pt260:cfg40', '1'); $('homeStart').checked = false; LS.set('pt260:homeStart', '0'); $('tsplMode').checked = true; LS.set('pt260:tsplMode', '1'); }
 if (LS.get('pt260:cfg45') !== '1') { LS.set('pt260:cfg45', '1'); $('dens').value = '12'; LS.set('pt260:dens', '12'); }
 if (LS.get('pt260:cfg42') !== '1') { LS.set('pt260:cfg42', '1'); [['fresh', '1'], ['lpause', '3'], ['rsm', 'restart'], ['clsmode', 'on'], ['hdmode', 'each']].forEach(([id, v]) => { $(id).value = v; LS.set('pt260:' + id, v); }); $('rxlog').checked = true; LS.set('pt260:rxlog', '1'); }
@@ -420,7 +496,9 @@ function analyzeGray(gray, w, h){
   return { grid: true, cells, cols: cr.length, rows: rr.length };
 }
 
-const LH = () => Math.max(10, +(TSPL.on() ? $('lh').value : ($('elh').value || $('lh').value)) || 30);
+const LH = () => Math.max(10, +$('lh').value || 30);
+const LW = () => Math.max(20, +$('lw').value || 48);
+const isCont = () => $('psize').value === 'E';           // رول پیوسته (بدون گپ): طول هر لیبل از خود طرح می‌آید
 const LHD = () => Math.round(LH() * 8);
 const lcan = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); return c; };
 function drawQR(cv, mods, N, x0, y0, wMax, hMax, quiet, even){
@@ -576,6 +654,33 @@ function cellLabel(cell){
   x.imageSmoothingEnabled = true; x.drawImage(g, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
   return cv;
 }
+
+/* ---------- برش خودکار لیبل از صفحه (v53) ----------
+   صفحهٔ A4/Letter که فقط یک لیبل کوچک در گوشه دارد (پرینت Safari از پنل دیجی‌کالا): قبلاً کل صفحه به اندازهٔ لیبل کوچک می‌شد
+   (لیبل ریز، جای چاپ جابه‌جا، و صفحهٔ دوم که فقط آدرس و تاریخ دارد یک لیبل اضافه هدر می‌داد).
+   حالا: ناحیه‌های جوهری صفحه پیدا می‌شوند، نوشتهٔ ریز بالا/پایین (هدر و فوتر مرورگر) دور ریخته می‌شود و فقط خود لیبل برش می‌خورد. */
+function inkClusters(gray, w, h){
+  const TH = 170, rowP = new Uint32Array(h);
+  for (let y = 0; y < h; y++) { const o = y * w; let c = 0; for (let x = 0; x < w; x++) if (gray[o + x] < TH) c++; rowP[y] = c; }
+  const runs = gRuns(rowP), gapY = Math.max(4, Math.round(h * 0.03)), rg = [];
+  runs.forEach(r => { const l = rg[rg.length - 1]; if (l && r[0] - l[1] - 1 < gapY) l[1] = r[1]; else rg.push(r.slice()); });
+  const out = [], gapX = Math.max(4, Math.round(w * 0.06));
+  rg.forEach(r => {
+    if ((r[1] - r[0] + 1) < h * 0.03) return;                       // نوار کوتاه = هدر/فوتر/نوشتهٔ ریز
+    const colP = new Uint32Array(w);
+    for (let y = r[0]; y <= r[1]; y++) { const o = y * w; for (let x = 0; x < w; x++) if (gray[o + x] < TH) colP[x]++; }
+    const cr = []; gRuns(colP).forEach(c => { const l = cr[cr.length - 1]; if (l && c[0] - l[1] - 1 < gapX) l[1] = c[1]; else cr.push(c.slice()); });
+    cr.forEach(c => {
+      if ((c[1] - c[0] + 1) < w * 0.05) return;
+      let y0 = 1e9, y1 = -1;
+      for (let y = r[0]; y <= r[1]; y++) { const o = y * w; for (let x = c[0]; x <= c[1]; x++) if (gray[o + x] < TH) { if (y < y0) y0 = y; if (y > y1) y1 = y; break; } }
+      if (y1 - y0 + 1 < h * 0.03) return;
+      const pad = Math.max(2, Math.round(Math.max(w, h) * 0.006));
+      out.push({ x0: Math.max(0, c[0] - pad) / w, x1: Math.min(w, c[1] + 1 + pad) / w, y0: Math.max(0, y0 - pad) / h, y1: Math.min(h, y1 + 1 + pad) / h });
+    });
+  });
+  return out;
+}
 async function analyzePdf(pdf, onProg){
   const items = []; let grids = 0;
   for (let p = 1; p <= pdf.numPages; p++) {
@@ -599,7 +704,10 @@ async function analyzePdf(pdf, onProg){
       } catch(e){}
     }
     if (r.grid && r.cells.length) { grids++; r.cells.forEach(c => items.push({ page: p - 1, cell: c })); }
-    else items.push({ page: p - 1, cell: null });
+    else {
+      const crops = inkClusters(gray, cv.width, cv.height);
+      items.push({ page: p - 1, cell: null, crops, frac: crops.reduce((a, c) => a + (c.x1 - c.x0) * (c.y1 - c.y0), 0) });
+    }
     await sleep(0);
   }
   return { items, grids };
@@ -608,11 +716,162 @@ async function analyzePdf(pdf, onProg){
 let src = { type: null, count: 0, pdf: null, items: null, rows: null, sig: '', a: null, full: false };
 
 function hash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h >>> 0); }
+// پیشرفتِ چاپ به فایل + حالت PDF + ترتیب + تعداد لیبل وصل است؛ با عوض‌شدن حالت، شماره‌ی قدیمی اشتباهی اعمال نمی‌شود
+const progKey = () => 'pt260p:' + src.sig + ':' + ($('pgmode').value || '') + ':' + ($('splitord').value || '') + ':' + src.count;
 function sigOf(files){ return hash(files.map(f => f.name + ':' + f.size).join('|')); }
 function applyY(cv, extra){
-  const yo = Math.round(+$('yoff').value || 0) + (extra || 0); if (!yo) return cv;
-  const o = lcan(cv.width, cv.height); o.getContext('2d').drawImage(cv, 0, yo); return o;
+  const yo = Math.round(+$('yoff').value || 0) + (extra || 0), xo = Math.round((+$('xoff').value || 0) * 8); if (!yo && !xo) return cv;
+  const o = lcan(cv.width, cv.height); o.getContext('2d').drawImage(cv, xo, yo); return o;
 }
+/* ---------- برچسب گارانتی (v55) ---------- */
+const toFa = s => String(s).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+const toEn = s => String(s).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const jdiv = (a, b) => ~~(a / b), jmod = (a, b) => a - ~~(a / b) * b;
+function jalLeap(jy){                       // سال کبیسهٔ شمسی (الگوریتم ۳۳ ساله‌ی jalaali)
+  const br = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+  let jp = br[0], jump = 0, n, i;
+  for (i = 1; i < br.length; i++) { const jm = br[i]; jump = jm - jp; if (jy < jm) break; jp = jm; }
+  n = jy - jp;
+  if (jump - n < 6) n = n - jump + jdiv(jump + 4, 33) * 33;
+  let lp = jmod(jmod(n + 1, 33) - 1, 4); if (lp === -1) lp = 4;
+  return lp === 0;
+}
+const jalLen = (y, m) => m <= 6 ? 31 : m <= 11 ? 30 : (jalLeap(y) ? 30 : 29);
+function jalAdd(d, n){ const t = d[0] * 12 + (d[1] - 1) + n, y = Math.floor(t / 12), m = t % 12 + 1; return [y, m, Math.min(d[2], jalLen(y, m))]; }
+const jalFmt = d => d[0] + '/' + String(d[1]).padStart(2, '0') + '/' + String(d[2]).padStart(2, '0');
+function jalParse(t){ const m = /(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(toEn(t)); if (!m) return null; const y = +m[1], mo = +m[2], d = +m[3]; return mo >= 1 && mo <= 12 && d >= 1 && d <= jalLen(y, mo) ? [y, mo, d] : null; }
+function jalToday(){
+  try { const p = new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(new Date()), g = t => +p.find(q => q.type === t).value; const r = [g('year'), g('month'), g('day')]; return r.every(v => v > 0) ? r : null; }
+  catch(e){ return null; }
+}
+function warrantyLabel(){
+  const v = id => $(id).value.trim(), f = { brand: v('wbrand'), title: v('wtitle') || 'گارانتی', months: Math.max(0, Math.round(+$('wmonths').value || 0)), desc: v('wdesc'), prod: v('wprod'), code: v('wcode'), serial: v('wserial'), contact: v('wcontact'), qr: v('wqr') };
+  const st = jalParse($('wstart').value), en = st && f.months ? jalAdd(st, f.months) : null;
+  const cv = lcan(W, 1600), x = cv.getContext('2d'), FONT = 'Tahoma, sans-serif', L = 18, R = W - 18, CW = R - L;
+  const T = (t, ax, y, fs, o) => { o = o || {}; x.save(); x.fillStyle = o.fill || '#000'; x.direction = o.dir || 'rtl'; x.textAlign = o.align || 'right'; x.textBaseline = 'middle'; x.font = (o.w || 'bold') + ' ' + fs + 'px ' + (o.fam || FONT); x.fillText(t, ax, y); x.restore(); };
+  const fitFs = (t, maxW, fs, min, o) => { o = o || {}; for (; fs > min; fs -= 2) { x.font = (o.w || 'bold') + ' ' + fs + 'px ' + (o.fam || FONT); if (x.measureText(t).width <= maxW) break; } return fs; };
+  const rr = (x0, y0, w, h, r) => { x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); };
+  // نوار سیاه بالا با سپر و نام برند
+  x.fillStyle = '#000'; rr(6, 6, W - 12, 72, 12); x.fill(); x.fillRect(6, 56, W - 12, 22);
+  { const cx = 48, cy = 42, s = 52; x.fillStyle = '#fff'; x.beginPath(); x.moveTo(cx, cy - s / 2); x.lineTo(cx + s * 0.42, cy - s * 0.32); x.lineTo(cx + s * 0.42, cy + s * 0.05); x.quadraticCurveTo(cx + s * 0.42, cy + s * 0.38, cx, cy + s / 2); x.quadraticCurveTo(cx - s * 0.42, cy + s * 0.38, cx - s * 0.42, cy + s * 0.05); x.lineTo(cx - s * 0.42, cy - s * 0.32); x.closePath(); x.fill();
+    x.strokeStyle = '#000'; x.lineWidth = 6; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(cx - s * 0.2, cy + s * 0.02); x.lineTo(cx - s * 0.04, cy + s * 0.2); x.lineTo(cx + s * 0.24, cy - s * 0.16); x.stroke(); }
+  if (f.brand) { const fs = fitFs(f.brand, R - 96 - 6, 38, 20); T(f.brand, R, 42, fs, { fill: '#fff' }); }
+  // نوار هشدار مورب
+  x.save(); x.beginPath(); x.rect(6, 78, W - 12, 14); x.clip(); x.fillStyle = '#000';
+  for (let k = -20; k < W; k += 20) { x.beginPath(); x.moveTo(k, 92); x.lineTo(k + 10, 92); x.lineTo(k + 24, 78); x.lineTo(k + 14, 78); x.closePath(); x.fill(); }
+  x.restore();
+  let y = 104;
+  // عنوان بزرگ + دایره‌ی مدت
+  const rowH = 132, cy = y + rowH / 2, tx = f.months ? 366 : R, tw = f.months ? 366 - 168 : CW;
+  if (f.months) {
+    x.fillStyle = '#000'; x.beginPath(); x.arc(84, cy, 62, 0, Math.PI * 2); x.fill();
+    const ms = toFa(f.months), fs = fitFs(ms, 96, 74, 36); T(ms, 84, cy - 10, fs, { fill: '#fff', align: 'center' }); T('ماه', 84, cy + 36, 28, { fill: '#fff', align: 'center' });
+  }
+  const tfs = fitFs(f.title, tw, 66, 28); x.font = 'bold 26px ' + FONT;
+  const dl = f.desc ? wrapText(x, f.desc, tw, 2) : [], th = tfs + dl.length * 32, ty = cy - th / 2 + tfs / 2;
+  T(f.title, tx, ty, tfs); dl.forEach((l, i) => T(l, tx, ty + tfs / 2 + 18 + i * 32, 26, { w: '600' }));
+  y += rowH + 8;
+  x.fillStyle = '#000'; x.fillRect(L, y, CW, 5); y += 17;
+  // کالا و کد
+  if (f.prod) { x.font = 'bold 32px ' + FONT; wrapText(x, f.prod, CW, 2).forEach(l => { T(l, R, y + 18, 32); y += 40; }); y += 4; }
+  if (f.code) { T('کد کالا', R, y + 14, 22, { w: '600' }); const fs = fitFs(f.code, CW - 110, 28, 16, { fam: 'monospace', dir: 'ltr' }); T(f.code, L, y + 14, fs, { fam: 'monospace', dir: 'ltr', align: 'left' }); y += 36; }
+  // تاریخ‌ها: پایان گارانتی سیاه و برجسته
+  if (st) {
+    const bh = 84, mid = (L + R) / 2; x.lineWidth = 4; x.strokeStyle = '#000'; rr(L, y, CW, bh, 10); x.stroke();
+    x.save(); rr(L, y, CW, bh, 10); x.clip(); x.fillStyle = '#000'; x.fillRect(L, y, mid - L, bh); x.restore();
+    T('شروع گارانتی', (mid + R) / 2, y + 22, 22, { align: 'center', w: '600' }); T(toFa(jalFmt(st)), (mid + R) / 2, y + 58, fitFs(toFa(jalFmt(st)), mid - L - 14, 34, 20), { align: 'center' });
+    if (en) { T('پایان گارانتی', (L + mid) / 2, y + 22, 22, { align: 'center', fill: '#fff', w: '600' }); T(toFa(jalFmt(en)), (L + mid) / 2, y + 58, fitFs(toFa(jalFmt(en)), mid - L - 14, 34, 20), { align: 'center', fill: '#fff' }); }
+    y += bh + 12;
+  }
+  if (f.serial) { T('فاکتور / سریال', R, y + 14, 22, { w: '600' }); const fs = fitFs(f.serial, CW - 150, 26, 16, { fam: 'monospace', dir: 'ltr' }); T(f.serial, L, y + 14, fs, { fam: 'monospace', dir: 'ltr', align: 'left' }); y += 36; }
+  // QR و پشتیبانی
+  let q = null; if (f.qr && new TextEncoder().encode(f.qr).length <= 180) { try { q = qrEncode(f.qr, 'M'); } catch(e){ q = null; } }
+  if (q || f.contact) {
+    const qs = q ? 132 : 0; y += 4;
+    if (q) drawQR(cv, q.mods, q.N, L, y, qs, qs, 2, false);
+    if (f.contact) { const cw2 = CW - (q ? qs + 14 : 0); T('پشتیبانی و خدمات', R, y + 16, 22, { w: '600' }); x.font = 'bold 28px ' + FONT; wrapText(x, f.contact, cw2, 4).forEach((l, i) => T(l, R, y + 52 + i * 36, 28, { dir: /[؀-ۿ]/.test(l) ? 'rtl' : 'ltr' })); }
+    y += Math.max(qs, f.contact ? 150 : 0) + 6;
+  }
+  // قاب بیرونی و خط برش
+  const fh = y + 8; x.strokeStyle = '#000'; x.lineWidth = 5; rr(3, 3, W - 6, fh - 3, 14); x.stroke();
+  const cutY = fh + 16; x.lineWidth = 3; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(6, cutY); x.lineTo(W - 6, cutY); x.stroke(); x.setLineDash([]);
+  const H = Math.ceil((cutY + 14) / 8) * 8, out = lcan(W, H);
+  out.getContext('2d').drawImage(cv, 0, 0, W, H, 0, 0, W, H);
+  return out;
+}
+
+/* ---------- لیبل فعال‌سازی GMW با کد یکتا (v56) ---------- */
+const GA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';            // بدون 0 O 1 I L
+const gmwCheck = b => { let t = 0; for (let i = 0; i < b.length; i++) t += (GA.indexOf(b[i]) + 1) * (i + 1); return GA[t % GA.length]; };
+const gmwValid = c => { const m = /^GMW-([2-9A-Z]{4})-([2-9A-Z]{4})$/.exec(c); if (!m) return false; const b = m[1] + m[2]; for (const ch of b) if (GA.indexOf(ch) < 0) return false; return gmwCheck(b.slice(0, 7)) === b[7]; };
+const GREG = { key: 'gmw:reg', all(){ try { const a = JSON.parse(LS.get(this.key) || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; } },
+  save(a){ try { localStorage.setItem(this.key, JSON.stringify(a)); return true; } catch(e){ return false; } } };
+function gmwNewCode(used){
+  for (let k = 0; k < 500; k++) {
+    const r = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(r);
+    let b = ''; for (let i = 0; i < r.length && b.length < 7; i++) if (r[i] < 248) b += GA[r[i] % 31];
+    if (b.length < 7) continue;
+    b += gmwCheck(b); const c = 'GMW-' + b.slice(0, 4) + '-' + b.slice(4);
+    if (!used.has(c)) { used.add(c); return c; }
+  }
+  throw new Error('ساخت کد یکتا ممکن نشد');
+}
+function gmwLabel(it){
+  const v = id => $(id).value.trim();
+  const cv = lcan(W, 2000), x = cv.getContext('2d'), FONT = 'Tahoma, sans-serif', L = 14, R = W - 14, CW = R - L, MID = W / 2;
+  const F = (fs, w, fam) => (w || 'bold') + ' ' + fs + 'px ' + (fam || FONT);
+  const T = (t, ax, y, fs, o) => { o = o || {}; x.save(); x.fillStyle = o.fill || '#000'; x.direction = o.dir || 'rtl'; x.textAlign = o.align || 'right'; x.textBaseline = 'middle'; x.font = F(fs, o.w, o.fam); x.fillText(t, ax, y); x.restore(); };
+  const fit = (t, maxW, fs, min, w, fam) => { for (; fs > min; fs -= 1) { x.font = F(fs, w, fam); if (x.measureText(t).width <= maxW) break; } return fs; };
+  const wrap = (t, maxW, fs, n, w) => { x.font = F(fs, w); return t ? wrapText(x, t, maxW, n) : []; };
+  const rr = (x0, y0, w, h, r) => { x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); };
+  // نوار بالا
+  x.fillStyle = '#000'; x.fillRect(0, 0, W, 56);
+  T('GMW', L, 29, 40, { fill: '#fff', dir: 'ltr', align: 'left', fam: '"Arial Black", "Helvetica Neue", Arial, sans-serif', w: '900' });
+  { const t = v('gtop'); if (t) T(t, R, 29, fit(t, CW - 120, 20, 12), { fill: '#fff' }); }
+  let y = 68;
+  // تیتر
+  wrap(v('ghead'), CW, 34, 3).forEach(l => { T(l, R, y + 22, 34); y += 44; }); y += 6;
+  // کادر مزایا
+  { const title = v('gbt'), items = $('gben').value.split(/\n+/).map(t => t.trim()).filter(Boolean).slice(0, 8), tw = CW - 24 - 22;
+    const rows = items.map(t => wrap(t, tw, 20, 3, '600')); let h = 12 + (title ? 34 : 0); rows.forEach(r => h += r.length * 28 + 6); h += 6;
+    if (title || rows.length) {
+      x.lineWidth = 3; x.strokeStyle = '#000'; rr(L, y, CW, h, 10); x.stroke();
+      let yy = y + 12; if (title) { T(title, R - 12, yy + 14, fit(title, CW - 24, 21, 13)); yy += 34; }
+      rows.forEach(r => { x.fillStyle = '#000'; x.beginPath(); x.arc(R - 18, yy + 14, 5, 0, Math.PI * 2); x.fill(); r.forEach(l => { T(l, R - 34, yy + 14, 20, { w: '600' }); yy += 28; }); yy += 6; });
+      y += h + 12;
+    } }
+  // نوار هشدار
+  { const ls = wrap(v('gwarn'), CW - 20, 20, 3); if (ls.length) { const h = ls.length * 28 + 16; x.fillStyle = '#000'; rr(L, y, CW, h, 10); x.fill(); ls.forEach((l, i) => T(l, MID, y + 8 + 14 + i * 28, 20, { fill: '#fff', align: 'center' })); y += h + 12; } }
+  // QR
+  { const t = v('gscan'); if (t) { T(t, MID, y + 14, fit(t, CW, 23, 13), { align: 'center' }); y += 34; } }
+  let url = v('gurl'); const host = url.replace(/^https?:\/\//i, '').replace(/[\/?#].*$/, '');
+  if (url) {
+    const qt = $('gqc').checked && it.c ? url.replace(/[\/]+$/, '') + '/?c=' + it.c : url; let q = null;
+    if (new TextEncoder().encode(qt).length <= 180) { try { q = qrEncode(qt, 'M'); } catch(e){ q = null; } }
+    if (q) { drawQR(cv, q.mods, q.N, MID - 100, y, 200, 200, 2, false); y += 204; }
+    if (host) { T(host, MID, y + 20, fit(host, CW, 34, 14, '900', 'Arial, sans-serif'), { align: 'center', dir: 'ltr', fam: '"Arial Black", Arial, sans-serif', w: '900' }); y += 44; }
+  }
+  // دادهٔ متغیر: قطعه، مهلت، کد
+  { const pl = wrap(it.p ? 'قطعه: ' + it.p : '', CW - 24, 22, 2), dl = it.d ? 'مهلت فعال‌سازی تا: ' + toFa(it.d) : '', note = v('gnote');
+    const h = 10 + pl.length * 30 + (dl ? 30 : 0) + 42 + (note ? 24 : 0) + 8;
+    x.lineWidth = 2; x.strokeStyle = '#000'; x.setLineDash([8, 6]); rr(L, y, CW, h, 10); x.stroke(); x.setLineDash([]);
+    let yy = y + 10; pl.forEach(l => { T(l, R - 12, yy + 15, 22); yy += 30; });
+    if (dl) { T(dl, R - 12, yy + 15, fit(dl, CW - 24, 22, 14)); yy += 30; }
+    T(it.c, MID, yy + 21, fit(it.c, CW - 24, 32, 18, 'bold', 'monospace'), { align: 'center', dir: 'ltr', fam: 'Menlo, "Courier New", monospace' }); yy += 42;
+    if (note) T(note, MID, yy + 11, fit(note, CW - 24, 17, 11, '600'), { align: 'center', w: '600' });
+    y += h; }
+  const cutY = y + 18; x.lineWidth = 3; x.strokeStyle = '#000'; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(6, cutY); x.lineTo(W - 6, cutY); x.stroke(); x.setLineDash([]);
+  const H = Math.ceil((cutY + 14) / 8) * 8, out = lcan(W, H);
+  out.getContext('2d').drawImage(cv, 0, 0, W, H, 0, 0, W, H);
+  return out;
+}
+function gmwSent(i){
+  if (src.type !== 'gmw' || !src.rows[i]) return;
+  const it = src.rows[i]; it.s = 1; it.st = new Date().toISOString();
+  const a = GREG.all(), r = a.find(q => q.c === it.c); if (r) { r.s = 1; r.st = it.st; GREG.save(a); }
+  if (window.gmwRefresh) gmwRefresh();
+}
+
 function mono(cv){
   const w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data, bits = new Uint8Array(h * BYTES), TH = Math.min(230, Math.max(60, +$('thr').value || 165));
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const j = (y * w + x) * 4; if (0.299 * d[j] + 0.587 * d[j+1] + 0.114 * d[j+2] < TH) bits[y * BYTES + (x >> 3)] |= 0x80 >> (x & 7); }
@@ -620,10 +879,12 @@ function mono(cv){
 }
 // یک صفحهٔ PDF به‌عنوان یک لیبل کامل (طرح آماده): با چرخش دلخواه، متناسب با لیبل، بدون برش
 async function fullPageLabel(pi, half){
-  const page = await src.pdf.getPage(pi + 1), v1 = page.getViewport({ scale: 1 }), H = LHD(), mode = $('pgrot').value || 'auto';
+  const page = await src.pdf.getPage(pi + 1), v1 = page.getViewport({ scale: 1 }), cont = isCont(), mode = $('pgrot').value || 'auto'; let H = LHD();
   const hw = half ? v1.width / 2 : v1.width;
-  const rot = mode === 'cw' ? 90 : mode === 'ccw' ? -90 : mode === 'none' ? 0 : ((hw < v1.height) !== (W < H) ? 90 : 0);
-  const pw = rot ? v1.height : hw, ph = rot ? hw : v1.height, fit = Math.min(W / pw, H / ph);
+  const rot = mode === 'cw' ? 90 : mode === 'ccw' ? -90 : mode === 'none' ? 0 : cont ? 0 : ((hw < v1.height) !== (W < H) ? 90 : 0);
+  const pw = rot ? v1.height : hw, ph = rot ? hw : v1.height;
+  if (cont) H = Math.min(1600, Math.max(96, Math.ceil(ph * (W - 8) / pw / 8) * 8 + 8));      // رول پیوسته: طول از نسبت صفحه
+  const fit = cont ? (W - 8) / pw : Math.min(W / pw, H / ph);
   const v = page.getViewport({ scale: Math.min(8, Math.max(1, fit * 3)) });
   const cv = lcan(Math.max(1, Math.round(v.width)), Math.max(1, Math.round(v.height)));
   await page.render({ canvasContext: cv.getContext('2d'), viewport: v }).promise; page.cleanup();
@@ -632,10 +893,40 @@ async function fullPageLabel(pi, half){
   x.save(); x.translate((W - dw) / 2 + dw / 2, (H - dh) / 2 + dh / 2); x.rotate(rot * Math.PI / 180); { const sw = half ? cv.width / 2 : cv.width, sx = half === 'R' ? cv.width - sw : 0; x.drawImage(cv, sx, 0, sw, cv.height, -uw / 2, -uh / 2, uw, uh); } x.restore();
   return out;
 }
+
+// یک ناحیهٔ برش‌خورده (کسر صفحه) به‌عنوان یک لیبل: فقط همان ناحیه با کیفیت بالا رندر می‌شود، بدون حاشیهٔ اضافه، متناسب با لیبل
+async function cropLabel(pi, c){
+  const page = await src.pdf.getPage(pi + 1), v1 = page.getViewport({ scale: 1 }), cont = isCont(), mode = $('pgrot').value || 'auto', M = 4; let H = LHD();
+  const cw = (c.x1 - c.x0) * v1.width, ch = (c.y1 - c.y0) * v1.height;
+  const rot = mode === 'cw' ? 90 : mode === 'ccw' ? -90 : mode === 'none' ? 0 : cont ? 0 : ((cw < ch) !== (W < H) ? 90 : 0);
+  const pw = rot ? ch : cw, ph = rot ? cw : ch;
+  if (cont) H = Math.min(1600, Math.max(96, Math.ceil((ph * (W - 2 * M) / pw + 2 * M) / 8) * 8));
+  const fit = cont ? (W - 2 * M) / pw : Math.min((W - 2 * M) / pw, (H - 2 * M) / ph);
+  const sc = Math.min(8, Math.max(1, fit * 3)), v = page.getViewport({ scale: sc });
+  const rw = Math.max(1, Math.round(cw * sc)), rh = Math.max(1, Math.round(ch * sc)), cv = lcan(rw, rh);
+  await page.render({ canvasContext: cv.getContext('2d'), viewport: v, transform: [1, 0, 0, 1, -c.x0 * v.width, -c.y0 * v.height] }).promise; page.cleanup();
+  const out = lcan(W, H), x = out.getContext('2d');
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.save(); x.translate(W / 2, H / 2); x.rotate(rot * Math.PI / 180); x.drawImage(cv, -cw * fit / 2, -ch * fit / 2, cw * fit, ch * fit); x.restore();
+  return out;
+}
 async function buildCanvas(i){
+  const c = await buildCanvas0(i);
+  if (!isCont()) return c;
+  // رول پیوسته: طول مضرب ۸ نقطه (۱ mm) + در صورت نیاز فاصله و خط برش بین لیبل‌ها
+  const cut = $('cutln').value === '1' && src.type !== 'warranty' && src.type !== 'gmw', h = Math.ceil((c.height + (cut ? 24 : 0)) / 8) * 8;
+  if (h === c.height) return c;
+  const o = lcan(c.width, h), x = o.getContext('2d'); x.drawImage(c, 0, 0);
+  if (cut) { x.strokeStyle = '#000'; x.lineWidth = 3; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(6, c.height + 12); x.lineTo(W - 6, c.height + 12); x.stroke(); }
+  return o;
+}
+async function buildCanvas0(i){
+  if (src.type === 'warranty') return warrantyLabel();
+  if (src.type === 'gmw') return gmwLabel(src.rows[i]);
   if (src.type === 'csv') return csvLabel(src.rows[i]);
   const it = src.items && src.items[i];
   if (!it) throw new Error('برگ ' + (i + 1) + ' لیبل ندارد');
+  if (it.crop) return await cropLabel(it.page, it.crop);
   if (!it.cell) return await fullPageLabel(it.page, it.half);
   return cellLabel(it.cell);
 }
@@ -645,7 +936,7 @@ async function buildPage(i){ return bitsOf(await buildCanvas(i), 0); }
 /* ---------- ESC/POS raster (GS v 0) ---------- */
 function concat(arr){ let n = 0; arr.forEach(a => n += a.length); const o = new Uint8Array(n); let p = 0; arr.forEach(a => { o.set(a, p); p += a.length; }); return o; }
 function trailFeed(n, h){ const pd = PITCHD(); return Math.max(0, Math.round(n * pd) - Math.round((n - 1) * pd) - h); }
-const PITCHD = () => Math.max(10, +(TSPL.on() ? $('pitch').value : ($('epitch').value || $('pitch').value)) || 39) * 8, HEADD = () => Math.round(Math.max(0, +$('head').value || 0) * 8);
+const PITCHD = () => Math.max(10, +$('pitch').value || 39) * 8, HEADD = () => Math.round(Math.max(0, +$('head').value || 0) * 8);
 const toStart = () => { const P = Math.round(PITCHD()), r = HEADD() % P; return r ? P - r : 0; };
 const bandRows = () => Math.max(1, Math.min(3, Math.round(+$('band').value || 3)));
 function band(bits, y0, r){ return concat([new Uint8Array([0x1D, 0x76, 0x30, 0x00, BYTES & 255, BYTES >> 8, r & 255, r >> 8]), bits.subarray(y0 * BYTES, (y0 + r) * BYTES)]); }
@@ -663,7 +954,7 @@ function blankFrames(dots){ const fr = [], r = bandRows(); for (let y = 0; y < d
 // وقتی فعال است، هر لیبل به‌صورت یک job کامل TSPL فرستاده می‌شود:
 //   SIZE/GAP/DIRECTION/REFERENCE/CLS + BITMAP(های نواری) + PRINT
 // مزیت: پرینتر خودش کاغذ را روی لیبل بعدی تنظیم می‌کند → نیازی به align و کالیبراسیون نیست.
-var TSPL = { on: () => !!($('tsplMode') && $('tsplMode').checked) };
+const TSPL = { on: () => !!($('tsplMode') && $('tsplMode').checked) };
 
 const tsplOpts = () => {
   const num = id => { const v = $(id).value; return v === '' || isNaN(+v) ? null : +v; };
@@ -684,8 +975,9 @@ const tsplOpts = () => {
 };
 function tsplHead(o){
   o = o || tsplOpts();
-  const fmt = v => (Math.round(v * 10) / 10) + ' mm', gap = Math.max(0, (+$('pitch').value || 39) - LH());
-  return ['SIZE 48 mm,' + fmt(LH()), 'GAP ' + fmt(gap) + ',0 mm', 'OFFSET ' + fmt(o.toff || 0)];
+  const fmt = v => (Math.round(v * 10) / 10) + ' mm', cont = isCont();
+  const gap = cont ? 0 : Math.max(0, (+$('pitch').value || 39) - LH()), hh = cont && o.hmm ? o.hmm : LH();
+  return ['SIZE ' + fmt(LW()) + ',' + fmt(hh), 'GAP ' + fmt(gap) + ',0 mm', 'OFFSET ' + fmt(o.toff || 0)];
 }
 // فریم‌های یک لیبل. fr.printAt = اندیس فریم PRINT (هرگز بدون اطمینان دوباره فرستاده نمی‌شود)
 // fr.mv = اندیس فریم‌های حرکتی (FORMFEED/FEED) که تکرارشان لیبل را می‌پراند.
@@ -693,7 +985,7 @@ function tsplJobFrames(bits, h, ov){
   const o = Object.assign(tsplOpts(), ov || {}), enc = new TextEncoder(), fr = [], mv = new Set(), hdr = new Set(), wait = {};
   const data = $('tinv').checked ? bits.map(b => b ^ 0xFF) : bits;      // TSPL: بیت ۰ = سیاه
   const push = lines => fr.push(enc.encode(lines.join('\r\n') + '\r\n'));
-  const head = tsplHead(o);
+  const head = tsplHead(isCont() ? Object.assign({}, o, { hmm: h / 8 }) : o);
   hdr.add(fr.length); push(head);
   if (o.extra && o.extra.length) { hdr.add(fr.length); push(o.extra); }
   if (o.ff === 'before') { mv.add(fr.length); push(['FORMFEED']); }
@@ -741,12 +1033,14 @@ function tsplBatch(list, ov){
 
 function updateTsplUi(){
   const on = TSPL.on(), busy = job.running;
-  ['head','mfeed','elh','epitch'].forEach(id => { if ($(id)) $(id).disabled = on; });
+  ['head','mfeed'].forEach(id => { if ($(id)) $(id).disabled = on; });
   ['bMFeed','bHdUp','bHdDn'].forEach(id => { if ($(id)) $(id).disabled = on || busy; });
-  ['bUp','bDn','bTspl','bRx','bPrep','bSkip','bFeedUp','bFeedDn','bRollDef'].forEach(id => { if ($(id)) $(id).disabled = busy; });
+  ['bUp','bDn','bTspl','bRx','bPrep','bSkip','bFeedUp','bFeedDn'].forEach(id => { if ($(id)) $(id).disabled = busy; });
   ['bCal','bSheetS','bSheetY','bSheetD','bSheetP','bExp','bVar'].forEach(id => { if ($(id)) $(id).disabled = !on || busy; });
   ['tinv','homeStart','toff','calcmd','tshift','tfeed','ffmode','dens','spd','tband','clsmode','hdmode','rsm','expv','cmpmode','ppw'].forEach(id => { if ($(id)) $(id).disabled = !on; });
+  if (isCont()) ['bCal','bPrep','bSkip','bFeedUp','bFeedDn'].forEach(id => { if ($(id)) $(id).disabled = true; });
 }
+function syncCont(){ const c = isCont(); $('posCard').hidden = c; $('contCard').hidden = !c; updateTsplUi(); }
 
 /* ---------- بلوتوث (فقط کانال CH1: 18F0 / 2AF1) ---------- */
 const SVC = '000018f0-0000-1000-8000-00805f9b34fb', CHR = '00002af1-0000-1000-8000-00805f9b34fb';
@@ -856,14 +1150,12 @@ async function gate(){
   if (job.stop) throw STOP;
   while (job.paused) { await sleep(200); if (job.stop) throw STOP; }
 }
-// داخل یک لیبل: لغو صبر می‌کند تا همین لیبل کامل فرستاده شود (نیمه‌کاره نمی‌ماند)
-async function gateMid(){ while (job.paused && !job.stop) await sleep(200); }
 const isPr = (fr, i) => fr.printSet ? fr.printSet.has(i) : fr.printAt === i;
 async function sendAll(frames, st, meta){
   let tick = Date.now() + (meta && meta.hold ? 1500 : 0);
   const hmax = frames.hdr ? Math.max(...frames.hdr) : -1;
   while (st.i < frames.length) {
-    await gateMid();
+    await gate();
     if (frames.hdFirst && frames.hdr && frames.hdr.has(st.i) && HEAD.ep === connEpoch && HEAD.key === frames.hkey) { st.i++; continue; }
     const f = frames[st.i];
     try { await write(f.slice()); }
@@ -950,7 +1242,7 @@ async function ensureHalves(){
 }
 async function prepMode(){
   if (wantSplit()) await ensureHalves();
-  else if (!src.a && $('pgmode').value === 'auto') src.a = await analyzePdf(src.pdf, (p, n) => { $('info').textContent = 'تحلیل صفحه ' + p + ' از ' + n + '…'; });
+  else if (!src.a && ($('pgmode').value === 'auto' || $('pgmode').value === 'crop')) src.a = await analyzePdf(src.pdf, (p, n) => { $('info').textContent = 'تحلیل صفحه ' + p + ' از ' + n + '…'; });
 }
 const modeChanged = async () => { if (src.type === 'pdf' && src.pdf) { try { await prepMode(); afterLoad(applyPdfMode()); } catch(e){ $('info').textContent = 'خطا: ' + e.message; } } };
 $('pgmode').addEventListener('change', modeChanged);
@@ -968,22 +1260,35 @@ function applyPdfMode(){
     const emp = src.halves.length * 2 - all.length;
     return all.length + ' لیبل جدا از ' + src.pdf.numPages + ' صفحهٔ دو‌لیبلی (' + (ord[0] === 'R' ? 'اول راست' : 'اول چپ') + (emp ? '؛ ' + emp + ' نیمهٔ خالی نادیده گرفته شد' : '') + ') — پیش‌نمایش را ببین';
   }
-  const a = src.a || { items: [] }, full = $('pgmode').value === 'full', items = a.items.filter(x => x.cell), skipped = a.items.length - items.length;
+  const a = src.a || { items: [] }, md = $('pgmode').value, full = md === 'full', rtl = $('splitord').value !== 'ltr', items = [];
+  if (!full) a.items.forEach(x => {
+    if (x.cell) { items.push(x); return; }
+    // صفحهٔ بدون شبکه: در حالت خودکار فقط وقتی برش می‌خورد که لیبل بخش کوچکی از صفحه باشد؛ در حالت «برش» همیشه
+    if (x.crops && x.crops.length && (md === 'crop' || x.frac < 0.5)) {
+      const cs = x.crops.slice().sort((p, q) => Math.abs(p.y0 - q.y0) > 0.04 ? p.y0 - q.y0 : (rtl ? q.x0 - p.x0 : p.x0 - q.x0));
+      cs.forEach(c => items.push({ page: x.page, cell: null, crop: c }));
+    }
+  });
   if (full || !items.length) {
     const all = Array.from({ length: src.pdf.numPages }, (_, i) => ({ page: i, cell: null }));
     src.items = all; src.count = all.length; src.full = true;
-    return all.length + ' لیبل (هر صفحه یک طرح کامل' + (full ? '' : '؛ شبکهٔ QR پیدا نشد') + ') — پیش‌نمایش را ببین و در صورت نیاز چرخش را عوض کن';
+    return all.length + ' لیبل (هر صفحه یک طرح کامل' + (full ? '' : '؛ شبکهٔ QR و لیبل قابل برش پیدا نشد') + ') — پیش‌نمایش را ببین و در صورت نیاز چرخش را عوض کن';
   }
   src.items = items; src.count = items.length; src.full = false;
-  const q = items.filter(x => x.cell.mods).length, tx = items.filter(x => x.cell.text || x.cell.cap).length;
-  let note = src.count + ' لیبل از ' + src.pdf.numPages + ' صفحه (' + q + ' QR با ساختار معتبر' + (tx ? '، متن کد برای ' + tx + ' لیبل' : '') + (src.count - q ? '، ' + (src.count - q) + ' خانه به‌صورت تصویر' : '') + ')';
-  if (skipped) note += ' — ' + skipped + ' صفحهٔ بدون شبکهٔ QR نادیده گرفته شد';
+  const nc = items.filter(x => x.crop).length, ng = items.length - nc;
+  if (!ng) {
+    const skip = src.pdf.numPages - new Set(items.map(x => x.page)).size;
+    return src.count + ' لیبل برش‌خورده از ' + src.pdf.numPages + ' صفحه' + (skip ? ' — ' + skip + ' صفحهٔ بدون لیبل (فقط هدر/فوتر مرورگر) نادیده گرفته شد' : '') + ' — پیش‌نمایش را ببین';
+  }
+  const q = items.filter(x => x.cell && x.cell.mods).length, tx = items.filter(x => x.cell && (x.cell.text || x.cell.cap)).length, skipped = src.pdf.numPages - new Set(items.map(x => x.page)).size;
+  let note = src.count + ' لیبل از ' + src.pdf.numPages + ' صفحه (' + q + ' QR با ساختار معتبر' + (tx ? '، متن کد برای ' + tx + ' لیبل' : '') + (ng - q ? '، ' + (ng - q) + ' خانه به‌صورت تصویر' : '') + (nc ? '، ' + nc + ' لیبل برش‌خورده' : '') + ')';
+  if (skipped > 0) note += ' — ' + skipped + ' صفحهٔ بدون لیبل نادیده گرفته شد';
   return note;
 }
 function afterLoad(note){
-  const saved = parseInt(LS.get('pt260p:' + src.sig) || '0', 10);
+  const saved = parseInt(LS.get(progKey()) || '0', 10);
   $('to').value = src.count; $('to').max = $('from').max = src.count;
-  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' فرستاده شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
+  if (saved > 0 && saved < src.count) { $('from').value = saved + 1; note += ' — ادامه از برگ ' + (saved + 1) + ' (تا برگ ' + saved + ' چاپ شده؛ برای شروع از اول، «از برگ» را ۱ کن)'; }
   else $('from').value = 1;
   $('info').textContent = note; log('فایل: ' + src.type + ' / ' + src.count + ' لیبل');
   updatePreview(); updateStartLabel();
@@ -1023,14 +1328,11 @@ function updateStartLabel(){
   b.textContent = n ? 'چاپ ' + n.toLocaleString('fa-IR') + ' لیبل' : 'محدودهٔ برگ‌ها نامعتبر است';
 }
 ['from', 'to', 'copies'].forEach(id => { $(id).addEventListener('input', updateStartLabel); $(id).addEventListener('change', updateStartLabel); });
-const lockables = () => document.querySelectorAll('#advbox input, #advbox select, #psize, #from, #to, #copies');
 function ui(run){
-  if (!run) lockables().forEach(el => { el.disabled = false; });
   $('bStart').disabled = run; $('bPause').disabled = !run; $('bStop').disabled = !run; $('file').disabled = run;
-  $('bConn').disabled = run; $('bMFeed').disabled = run;
+  $('bConn').disabled = run; $('bMFeed').disabled = run; $('bWUse').disabled = run;
   if (!run) { $('bPause').textContent = 'توقف موقت'; job.paused = false; $('bRe').hidden = true; $('bNext').hidden = true; $('bAgain').hidden = true; }
   updateTsplUi();
-  if (run) lockables().forEach(el => { el.disabled = true; });
 }
 const manualStep = () => $('stepmode').value === 'manual';
 let nextHit = false;
@@ -1043,23 +1345,28 @@ async function stepWait(msg){
 }
 $('bNext').onclick = () => { nextHit = true; };
 $('bAgain').onclick = () => { againHit = true; };
-const profKey = () => [device && device.name, TSPL.on() ? 'tspl' : 'escpos', $('tinv').checked ? 1 : 0, $('toff').value, $('head').value, $('lh').value, $('pitch').value, $('yoff').value, $('yoff2').value, $('capt').checked ? 1 : 0, $('tshift').value, $('tfeed').value, $('ffmode').value, $('dens').value, $('spd').value].join('|');
+const profKey = () => [device && device.name, TSPL.on() ? 'tspl' : 'escpos', $('tinv').checked ? 1 : 0, $('toff').value, $('head').value, $('lh').value, $('pitch').value, $('yoff').value, $('yoff2').value, $('capt').checked ? 1 : 0, $('tshift').value, $('tfeed').value, $('ffmode').value, $('dens').value, $('spd').value, $('lw').value, $('xoff').value, $('psize').value, $('tear').value].join('|');
 const isOk = () => LS.get('pt260:ok:' + hash(profKey())) === '1';
 const markOk = () => LS.set('pt260:ok:' + hash(profKey()), '1');
 let wlk = null;
 async function wakeOn(){ try { wlk = await navigator.wakeLock.request('screen'); } catch(e){} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && job.running) wakeOn(); });
 const LAST = { sig: '', p: 0 };
+// رول پیوسته: بعد از آخرین لیبل فید اضافه برای رسیدن به لبه‌ی کندن
+function contOv(last){ if (!isCont() || !last) return undefined; const t = Math.round(Math.max(0, +$('tear').value || 0) * 8); return t ? { feed: tsplOpts().feed + t } : undefined; }
 async function startJob(){
   if (job.running) return;
-  if (!src.count) { alert('اول فایل PDF یا CSV را انتخاب کن'); return; }
+  if (!src.count) { alert('اول فایل PDF یا CSV را انتخاب کن یا برچسب گارانتی / لیبل GMW بساز'); return; }
+  if (src.type === 'warranty' && !isCont()) { alert('برچسب گارانتی برای رول پیوسته ساخته می‌شود؛ رول را روی «سایز ۴ — پیوسته ۵۷ mm» بگذار.'); return; }
+  if (src.type === 'gmw' && !isCont()) { alert('لیبل GMW برای رول پیوسته ساخته می‌شود؛ رول را روی «سایز ۴ — پیوسته ۵۷ mm» بگذار.'); return; }
+  if (src.type === 'gmw' && (+$('copies').value || 1) !== 1) { $('copies').value = 1; $('copies').dispatchEvent(new Event('change')); updateStartLabel(); alert('برای لیبل GMW «تعداد کپی» باید ۱ باشد، چون هر لیبل کد جدا دارد. روی ۱ گذاشتم؛ دوباره «شروع» را بزن.'); return; }
   let from = Math.max(1, +$('from').value || 1); const to = Math.min(src.count, +$('to').value || src.count);
   const copies = Math.max(1, +$('copies').value || 1);
   if (from > to) { alert('محدوده‌ی برگ‌ها نامعتبر است'); return; }
-  if (LAST.sig === src.sig && LAST.p >= from) {
-    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً فرستاده شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
+  if (LAST.sig === progKey() && LAST.p >= from) {
+    if (!confirm('برگ ' + from + ' تا ' + Math.min(LAST.p, to) + ' قبلاً چاپ شده‌اند.\n\nتأیید = دوباره چاپ شوند (تکراری)\nانصراف = ادامه از برگ ' + (LAST.p + 1))) {
       from = LAST.p + 1; $('from').value = from;
-      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً فرستاده شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
+      if (from > to) { big('همهٔ برگ‌های این محدوده قبلاً چاپ شده‌اند؛ چیزی ارسال نشد', 'warn'); return; }
     }
   }
   job.running = true; job.paused = false; job.stop = false; ui(true); beepInit();
@@ -1069,7 +1376,7 @@ async function startJob(){
   const mode = TSPL.on() ? 'TSPL (native)' : 'ESC/POS GS v 0 نواری';
   log('پیش‌بررسی: ' + mode + ' • CH1 • ارسال تأییدی • سر چاپ تا برش ' + ($('head').value || 0) + ' mm • ارتفاع لیبل ' + LH() + ' mm، گام ' + $('pitch').value + ' mm (' + LHD() + ' نقطه)، اتصال تازه ≤ ' + ($('fresh').value || 0) + ' s • نواری: ' + bandRows() + ' ردیف، تأخیر ' + userDelay() + ' ms، مکث لیبل ' + ($('lpause').value || 0) + ' ثانیه • جابه‌جایی عمودی ' + ($('yoff').value || 0) + ' • کد کنار QR ' + ($('capt').checked ? 'روشن' : 'خاموش') + ' • ' + settingsLine());
   const prep = p => buildCanvas(p - 1);
-  let curP = from, sentOfPage = 0, lastSentP = 0, pageDone = false, rejectFirst = false;
+  let curP = from, sentOfPage = 0;
   try {
     big('در حال اتصال به پرینتر…', 'warn');
     if (!isUp()) await connect();
@@ -1083,7 +1390,7 @@ async function startJob(){
     if (TSPL.on()) { await ensureConnected({ label: 'بررسی پرینتر' }); await waitReady(); }
     let nxt = prep(from), printedAny = false; nxt.catch(() => {});
     for (let p = from; p <= to; p++) {
-      curP = p; pageDone = false;
+      curP = p;
       await gate();
       PS.label = 'برگ ' + p + ' از ' + to;
       big('آماده‌سازی ' + PS.label + '…', 'run');
@@ -1096,11 +1403,11 @@ async function startJob(){
         const d0 = PS.disc, tl0 = Date.now();
         if (manualStep() && printedAny) { big('اتصال تازه قبل از ' + meta.label + '…', 'run'); await forceFresh(meta.label); await sleep(1200); meta.skipFresh = true; }
         const yo2 = printedAny ? Math.round((+$('yoff2').value || 0) * 8) : 0, bh = bitsOf(data, yo2);
-        const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h) : jobFrames(bh.bits, bh.h, p);
+        const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h, contOv(p === to && c === copies)) : jobFrames(bh.bits, bh.h, p);
         if (frames.info) log(meta.label + ' • داده: ' + frames.info.bytes + ' بایت در ' + frames.info.frames + ' بسته' + (frames.info.skipped ? ' (' + frames.info.skipped + ' نوار سفید حذف شد)' : '') + (printedAny ? ' • لیبل دوم به بعد' : ' • لیبل اول نوبت') + (yo2 ? ' • جابه‌جایی اضافه ' + yo2 + ' نقطه' : ''));
-        await printUnit(frames, meta); printedAny = true; sentOfPage++; lastSentP = p; pageDone = (c === copies);
+        await printUnit(frames, meta); printedAny = true; sentOfPage++;
         { const k = PS.disc - d0; log('حسابداری (فقط ارسال؛ چاپ تأیید نشده): ' + meta.label + ' • قطع اتصال حین ارسال: ' + k + ' • مدت ارسال: ' + ((Date.now() - tl0) / 1000).toFixed(1) + ' ثانیه'); if (k > 0) PS.dropL.push(meta.label + ' (×' + k + ')'); }
-        if (c === copies) { LAST.sig = src.sig; LAST.p = p; LS.set('pt260p:' + src.sig, String(p)); curP = p + 1; }
+        if (c === copies) { LAST.sig = progKey(); LAST.p = p; LS.set(progKey(), String(p)); gmwSent(p - 1); }
         done++; $('prog').value = done; statsLine();
         if (!gateDone && total > 1 && !isOk()) {
           gateDone = true;
@@ -1112,7 +1419,7 @@ async function startJob(){
             big('✋ لیبل اول چاپ شد؛ آن را روی کاغذ ببین و تأیید کن (TSPL)', 'warn');
           }
           await sleep(1500);
-          if (!confirm('لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف؛ بعد در کارت ۳ با «چاپ ۱ میلی‌متر بالاتر/پایین‌تر» اصلاح کن و دوباره «شروع چاپ» بزن')) { job.stop = true; rejectFirst = true; throw STOP; }
+          if (!confirm(isCont() ? 'لیبل اول کامل و خوانا چاپ شد (چیزی بریده نشده)؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف' : 'لیبل اول دقیقاً داخل یک لیبل و کامل چاپ شد؟\n\nتأیید = ادامه‌ی چاپ بقیه\nانصراف = توقف؛ بعد در کارت ۳ با «چاپ ۱ میلی‌متر بالاتر/پایین‌تر» اصلاح کن و دوباره «شروع چاپ» بزن')) { job.stop = true; throw STOP; }
           markOk(); log('هم‌ترازی تأیید شد: ' + profKey());
           await align('هم‌ترازی دوباره بعد از بررسی');
         }
@@ -1132,29 +1439,20 @@ async function startJob(){
       big('بیرون آوردن لیبل آخر تا لبه‌ی برش…', 'run');
       await printUnit(blankFrames(HEADD()), { label: 'بیرون آوردن لیبل آخر' });
     }
-    LS.set('pt260p:' + src.sig, '0');
+    LS.set(progKey(), '0');
     log('خلاصه: لیبل‌های همراه با قطع اتصال = ' + (PS.dropL.length ? PS.dropL.join('، ') : 'هیچ'));
     big('ارسال انجام شد (' + total + ' لیبل) — چاپ فیزیکی را خود اپ نمی‌تواند ببیند؛ لیبل‌ها را روی کاغذ نگاه کن. قطع‌شدن: ' + PS.disc + '، اتصال مجدد: ' + PS.rec + (PS.susp.size ? ' — ⚠ قطع در میانهٔ ارسال: ' + [...PS.susp].join('، ') + ' (روی کاغذ بررسی کن)' : ''), PS.susp.size ? 'warn' : 'ok'); beep(!PS.susp.size);
   } catch(e){
-    // نقطهٔ ادامه: برگی که هنوز کامل فرستاده نشده؛ اگر کاغذ تمام شد یا لیبل اول رد شد، همان لیبل آخر دوباره
-    const reprint = !!((e && e.printerErr) || rejectFirst) && lastSentP > 0;
-    let resumeP = reprint ? lastSentP : curP, remNote = '';
-    const allSent = !reprint && resumeP > to;
-    if (allSent) { LS.set('pt260p:' + src.sig, '0'); resumeP = to; }
-    if (reprint) { LAST.sig = src.sig; LAST.p = resumeP - 1; LS.set('pt260p:' + src.sig, String(resumeP - 1)); }
-    $('from').value = resumeP;
-    if (!allSent && copies > 1 && resumeP === to) {
-      const sentHere = (reprint && resumeP === lastSentP) ? (pageDone ? copies : sentOfPage) : (resumeP === lastSentP && !pageDone ? sentOfPage : 0);
-      const rem = Math.max(1, Math.min(copies, copies - sentHere + (reprint ? 1 : 0)));
-      if (rem < copies) { $('copies').value = rem; $('copies').dispatchEvent(new Event('change')); remNote = ' • «تعداد کپی» روی ' + rem + ' (باقی‌مانده) گذاشته شد.'; log('کپی باقی‌مانده: ' + rem); }
+    $('from').value = curP;
+    let remNote = '';
+    if (copies > 1 && sentOfPage > 0 && curP === to) {
+      const rem = Math.min(copies, copies - sentOfPage + (e && e.printerErr ? 1 : 0));
+      if (rem > 0 && rem < copies) { $('copies').value = rem; $('copies').dispatchEvent(new Event('change')); remNote = ' • «تعداد کپی» روی ' + rem + ' (باقی‌مانده) گذاشته شد.'; log('کپی باقی‌مانده: ' + rem); }
     }
-    const curPx = resumeP;
-    if (allSent) { big('همهٔ ' + total + ' لیبل فرستاده شده بود؛ چیزی جا نماند.', 'ok'); }
-    else if (e && e.printerErr) { big('⛔ ' + e.message + '. مشکل را برطرف کن، اگر لازم شد «آماده‌سازی رول» را بزن و بعد «شروع چاپ»؛ آخرین لیبل (برگ ' + curPx + ') دوباره فرستاده می‌شود. اگر روی کاغذ کامل بود، «از برگ» را ' + (curPx + 1) + ' کن.', 'bad'); log('ERR پرینتر: ' + e.message); beep(false); }
-    else if (e && e.ambig) { big('⚠ ارسال دستور چاپ ' + (PS.label || '') + ' نامعلوم ماند. لیبل را روی کاغذ ببین: اگر چاپ شده «از برگ» را ' + (curPx + 1) + ' بگذار، اگر چاپ نشده روی ' + curPx + ' بماند؛ بعد «شروع چاپ».', 'warn'); log('ERR ' + errText(e)); beep(false); }
-    else if (e === STOP && rejectFirst) big('⏹ متوقف شد. جای چاپ را در کارت ۳ اصلاح کن و «شروع چاپ» را بزن؛ همان لیبل اول دوباره فرستاده می‌شود.', 'warn');
-    else if (e === STOP) big('⏹ لغو شد بعد از ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curPx + ' ادامه می‌دهد', 'warn');
-    else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — با «شروع چاپ» از برگ ' + curPx + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); beep(false); }
+    if (e && e.printerErr) { big('⛔ ' + e.message + '. مشکل را برطرف کن، اگر لازم شد «آماده‌سازی رول» را بزن و بعد «شروع چاپ»؛ از برگ ' + curP + ' ادامه می‌دهد (اگر این برگ کامل چاپ شده بود، «از برگ» را ' + (curP + 1) + ' کن).', 'bad'); log('ERR پرینتر: ' + e.message); beep(false); }
+    else if (e && e.ambig) { big('⚠ ارسال دستور چاپ ' + (PS.label || '') + ' نامعلوم ماند. لیبل را روی کاغذ ببین: اگر چاپ شده «از برگ» را ' + (curP + 1) + ' بگذار، اگر چاپ نشده روی ' + curP + ' بماند؛ بعد «شروع چاپ».', 'warn'); log('ERR ' + errText(e)); beep(false); }
+    else if (e === STOP) big('⏹ لغو شد در ' + (PS.label || 'ابتدا') + ' — با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'warn');
+    else { big('✗ چاپ متوقف شد: ' + errText(e) + ' — برگ‌های ۱ تا ' + (curP - 1) + ' فرستاده شده‌اند؛ با «شروع چاپ» از برگ ' + curP + ' ادامه می‌دهد', 'bad'); log('ERR ' + errText(e)); beep(false); }
     if (remNote) $('ptxt').textContent += remNote;
   } finally {
     job.running = false; ui(false); statsLine(); updateStartLabel();
@@ -1418,7 +1716,7 @@ $('bExp').onclick = async () => {
 };
 $('bDef').onclick = () => {
   if (!confirm('تنظیمات TSPL (SHIFT، فید، FORMFEED، OFFSET، غلظت، سرعت، ردیف بسته، وارونگی، HOME) به پیش‌فرض برگردد؟')) return;
-  [['ffmode', 'none'], ['tshift', '0'], ['tfeed', '0'], ['toff', '7'], ['dens', '14'], ['spd', ''], ['tband', '3'], ['clsmode', 'on'], ['hdmode', 'each'], ['rsm', 'restart'], ['cmpmode', 'compact'], ['ppw', '0']].forEach(([id, v]) => { $(id).value = v; $(id).dispatchEvent(new Event('change')); });
+  [['ffmode', 'none'], ['tshift', '0'], ['tfeed', '0'], ['toff', $('psize').value === 'D' ? '0' : '7'], ['dens', '14'], ['spd', ''], ['tband', '3'], ['clsmode', 'on'], ['hdmode', 'each'], ['rsm', 'restart'], ['cmpmode', 'compact'], ['ppw', '0']].forEach(([id, v]) => { $(id).value = v; $(id).dispatchEvent(new Event('change')); });
   [['tinv', true], ['homeStart', false]].forEach(([id, v]) => { $(id).checked = v; $(id).dispatchEvent(new Event('change')); });
   log('تنظیمات TSPL به پیش‌فرض برگشت');
 };
@@ -1429,27 +1727,25 @@ $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('
 
 // سایز لیبل: هر سایز ارتفاع، گام، جابه‌جایی‌ها، OFFSET، SHIFT، فید و FORMFEED خودش را جدا ذخیره می‌کند
 (function(){
-  const PSF = ['lh', 'pitch', 'yoff', 'yoff2', 'toff', 'tshift', 'tfeed', 'ffmode', 'elh', 'epitch'];
-  const PSDEF = { A: { elh: '34.5', epitch: '39', lh: '29', pitch: '35.6', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' }, B: { elh: '40', epitch: '42.4', lh: '34.5', pitch: '39', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none' } };
+  if (LS.get('pt260:cfg54') !== '1') { LS.set('pt260:cfg54', '1'); LS.set('pt260:psize', 'D'); $('psize').value = 'D'; }
+  const PSF = ['lh', 'pitch', 'yoff', 'yoff2', 'toff', 'tshift', 'tfeed', 'ffmode', 'lw', 'xoff', 'tear', 'cutln'];
+  const PSDEF = { A: { lh: '29', pitch: '35.6', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none', lw: '48', xoff: '0', tear: '0', cutln: '0' }, B: { lh: '34.5', pitch: '39', yoff: '0', yoff2: '0', toff: '7', tshift: '0', tfeed: '0', ffmode: 'none', lw: '48', xoff: '0', tear: '0', cutln: '0' }, D: { lh: '34', pitch: '36', yoff: '0', yoff2: '0', toff: '0', tshift: '0', tfeed: '0', ffmode: 'none', lw: '51', xoff: '0', tear: '0', cutln: '0' }, E: { lh: '40', pitch: '40', yoff: '0', yoff2: '0', toff: '0', tshift: '0', tfeed: '0', ffmode: 'none', lw: '57', xoff: '0', tear: '10', cutln: '1' } };
+  const PNAME = { A: 'سایز ۱', B: 'سایز ۲', D: 'سایز ۳ (Dlabel)', E: 'سایز ۴ (پیوسته ۵۷)' };
+  window.PNAME = PNAME;
   const key = k => 'pt260:size:' + k, sel = $('psize');
   const save = k => { const o = {}; PSF.forEach(id => o[id] = $(id).value); LS.set(key(k), JSON.stringify(o)); };
   const load = k => { let o = null; try { o = JSON.parse(LS.get(key(k)) || 'null'); } catch(e){} o = o || {}; PSF.forEach(id => { $(id).value = o[id] !== undefined ? o[id] : PSDEF[k][id]; }); sched(); };
   let cur = sel.value; if (!PSDEF[cur]) { cur = 'B'; sel.value = 'B'; }
   if (!LS.get(key(cur))) { PSF.forEach(id => { $(id).value = PSDEF[cur][id]; }); save(cur); } else load(cur);
+  syncCont();
   PSF.forEach(id => $(id).addEventListener('change', () => save(cur)));
-  $('bRollDef').onclick = () => {
-    if (!confirm('طول چاپ، گام فرمان، OFFSET و جابه‌جایی‌های ' + (cur === 'A' ? 'سایز ۱' : 'سایز ۲') + ' به پیش‌فرض برگردد؟')) return;
-    PSF.forEach(id => { $(id).value = PSDEF[cur][id]; }); save(cur); sched();
-    ['toff', 'lh'].forEach(id => $(id).dispatchEvent(new Event('change')));
-    log('تنظیم رول ' + cur + ' به پیش‌فرض برگشت: ' + JSON.stringify(PSDEF[cur]));
-  };
-  sel.addEventListener('change', () => { save(cur); cur = sel.value; load(cur); log('سایز لیبل: ' + (cur === 'A' ? 'سایز ۱' : 'سایز ۲') + ' — ارتفاع ' + $('lh').value + '، گام ' + $('pitch').value); });
+  sel.addEventListener('change', () => { save(cur); cur = sel.value; load(cur); syncCont(); log('سایز لیبل: ' + PNAME[cur] + ' — عرض ' + $('lw').value + '، ارتفاع ' + $('lh').value + '، گام ' + $('pitch').value); });
 })();
 
 // جای چاپ: OFFSET (جای ایستادن کاغذ برای لیبل بعدی؛ برای هر سایز جدا ذخیره می‌شود)
 (function(){
   const fa = v => (+v || 0).toLocaleString('fa-IR', { maximumFractionDigits: 1 });
-  const show = () => { $('feedNow').textContent = ($('psize').value === 'A' ? 'سایز ۱' : 'سایز ۲') + ' • جای چاپ (OFFSET): ' + fa($('toff').value) + ' mm • طول چاپ: ' + fa($('lh').value) + ' mm'; };
+  const show = () => { $('feedNow').textContent = (window.PNAME ? window.PNAME[$('psize').value] : '') + ' • جای چاپ (OFFSET): ' + fa($('toff').value) + ' mm • طول چاپ: ' + fa($('lh').value) + ' mm'; };
   $('bSkip').onclick = () => {
     const lh = Math.max(15, Math.round(((+$('lh').value || 30) - 1.5) * 10) / 10), pi = Math.max(lh + 1, Math.round(((+$('pitch').value || 35) - 1.5) * 10) / 10);
     $('lh').value = lh; $('pitch').value = pi; $('lh').dispatchEvent(new Event('change')); $('pitch').dispatchEvent(new Event('change'));
@@ -1476,13 +1772,84 @@ $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText($('
 // همگام‌سازی UI با تغییر حالت چاپ
 (function(){
   const el = $('tsplMode');
-  if (el) { const verTxt = () => { $('ver').textContent = 'نسخه ۵۳ • PT-260 • ' + (TSPL.on() ? 'TSPL' : 'ESC/POS (قدیمی)'); }; verTxt();
-  el.addEventListener('change', () => { updateTsplUi(); verTxt(); sched(); log('حالت چاپ: ' + (TSPL.on() ? 'TSPL' : 'ESC/POS')); }); updateTsplUi(); }
+  if (el) { el.addEventListener('change', () => { updateTsplUi(); log('حالت چاپ: ' + (TSPL.on() ? 'TSPL' : 'ESC/POS')); }); updateTsplUi(); }
 })();
+
+// برچسب گارانتی: ساخت، به‌روزرسانی زنده و انتخاب به‌عنوان منبع چاپ
+(function(){
+  const ids = ['wbrand', 'wtitle', 'wmonths', 'wstart', 'wdesc', 'wprod', 'wcode', 'wserial', 'wcontact', 'wqr'];
+  const wSig = () => hash('w:' + Date.now() + ':' + ids.map(i => $(i).value).join('|'));
+  const wInfo = () => 'برچسب گارانتی' + ($('wprod').value.trim() ? ': ' + $('wprod').value.trim() : '') + ' — با «تعداد کپی» تعداد را مشخص کن';
+  const jt = jalToday(); if (jt) $('wstart').value = toFa(jalFmt(jt));
+  const apply = () => { if (src.type !== 'warranty') return; src.sig = wSig(); $('info').textContent = wInfo(); sched(); };
+  ids.forEach(i => $(i).addEventListener('input', apply));
+  $('bWUse').onclick = () => {
+    if (!jalParse($('wstart').value) && $('wstart').value.trim()) { alert('تاریخ شروع را مثل ۱۴۰۵/۰۸/۱۹ بنویس (یا خالی بگذار).'); return; }
+    if ($('psize').value !== 'E') { $('psize').value = 'E'; $('psize').dispatchEvent(new Event('change')); }
+    src = { type: 'warranty', pdf: null, items: null, rows: null, count: 1, sig: wSig(), a: null, full: false };
+    $('fname').textContent = 'برچسب گارانتی';
+    afterLoad(wInfo()); log('برچسب گارانتی ساخته شد؛ رول روی سایز ۴ (پیوسته ۵۷ mm) است');
+  };
+})();
+
+// لیبل فعال‌سازی GMW: ساخت دسته با کد یکتا، ویرایش زنده و دفتر کدها
+(function(){
+  const txt = ['gtop', 'ghead', 'gbt', 'gben', 'gwarn', 'gscan', 'gurl', 'gnote'];
+  const setDead = () => { const jt = jalToday(), m = Math.max(1, Math.round(+$('gmonths').value || 6)); if (jt) $('gdead').value = toFa(jalFmt(jalAdd(jt, m))); };
+  const gInfo = () => src.count.toLocaleString('fa-IR') + ' لیبل GMW با کد یکتا' + (src.rows[0] && src.rows[0].p ? ' — ' + src.rows[0].p : '');
+  const esc = t => String(t == null ? '' : t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const csv = () => '\ufeff' + ['کد,قطعه,مهلت فعال‌سازی,تاریخ ساخت,وضعیت,زمان ارسال به پرینتر'].concat(GREG.all().map(r => [r.c, '"' + String(r.p || '').replace(/"/g, '""') + '"', r.d || '', r.j || '', r.s ? 'ارسال‌شده' : 'ساخته‌شده', r.st || ''].join(','))).join('\r\n');
+  window.gmwRefresh = () => {
+    const a = GREG.all(), sent = a.filter(r => r.s).length;
+    $('gstat').textContent = a.length ? a.length.toLocaleString('fa-IR') + ' کد ذخیره‌شده • ' + sent.toLocaleString('fa-IR') + ' ارسال‌شده به پرینتر' : 'هنوز کدی ساخته نشده';
+    $('glist').innerHTML = a.slice(-8).reverse().map(r => '<div style="border-top:1px solid var(--line);padding:6px 0"><b dir="ltr" style="font-family:ui-monospace,Menlo,monospace">' + esc(r.c) + '</b> ' + (r.s ? '✓' : '') + '<br>' + esc(r.p) + ' • مهلت ' + esc(toFa(r.d || '')) + ' • ساخت ' + esc(toFa(r.j || '')) + '</div>').join('');
+  };
+  setDead(); gmwRefresh();
+  $('gmonths').addEventListener('input', setDead);
+  txt.forEach(i => $(i).addEventListener('input', () => { if (src.type === 'gmw') sched(); }));
+  $('gqc').addEventListener('change', () => { if (src.type === 'gmw') sched(); });
+  // ویرایش نام قطعه یا مهلت: روی لیبل‌های هنوز ارسال‌نشدهٔ همین دسته اعمال می‌شود
+  const live = () => {
+    if (src.type !== 'gmw' || job.running) return;
+    const p = $('gprod').value.trim(), d = jalParse($('gdead').value); if (!p || !d) return;
+    const ds = jalFmt(d), a = GREG.all(), map = new Map(a.map(r => [r.c, r])); let n = 0;
+    src.rows.forEach(it => { if (it.s) return; it.p = p; it.d = ds; const r = map.get(it.c); if (r) { r.p = p; r.d = ds; } n++; });
+    if (n) { GREG.save(a); $('info').textContent = gInfo(); gmwRefresh(); sched(); }
+  };
+  ['gprod', 'gdead', 'gmonths'].forEach(i => $(i).addEventListener('input', live));
+  $('bGUse').onclick = () => {
+    if (job.running) return;
+    const p = $('gprod').value.trim(), d = jalParse($('gdead').value), n = Math.min(300, Math.max(1, Math.round(+$('gcount').value || 1)));
+    if (!p) { alert('نام قطعه را بنویس.'); return; }
+    if (!d) { alert('مهلت فعال‌سازی را مثل ۱۴۰۶/۰۲/۲۵ بنویس.'); return; }
+    let a = GREG.all();
+    if (src.type === 'gmw') { const drop = new Set(src.rows.filter(it => !it.s).map(it => it.c)); if (drop.size) a = a.filter(r => !drop.has(r.c)); }   // کدهای چاپ‌نشدهٔ دستهٔ قبلی دور ریخته می‌شوند
+    const used = new Set(a.map(r => r.c)), jt = jalToday(), rows = [];
+    try { for (let i = 0; i < n; i++) rows.push({ c: gmwNewCode(used), p, d: jalFmt(d), j: jt ? jalFmt(jt) : '', t: new Date().toISOString(), s: 0 }); }
+    catch(e){ alert(errText(e)); return; }
+    if (!GREG.save(a.concat(rows.map(r => Object.assign({}, r))))) { alert('ذخیرهٔ کدها روی این گوشی ممکن نشد (حافظهٔ مرورگر پر یا بسته است). لیبلی ساخته نشد.'); return; }
+    if ($('psize').value !== 'E') { $('psize').value = 'E'; $('psize').dispatchEvent(new Event('change')); }
+    $('copies').value = 1; $('copies').dispatchEvent(new Event('change'));
+    src = { type: 'gmw', pdf: null, items: null, rows, count: n, sig: hash('g:' + rows[0].c + ':' + n), a: null, full: false };
+    $('fname').textContent = 'لیبل فعال‌سازی GMW';
+    afterLoad(gInfo()); gmwRefresh(); log('لیبل GMW: ' + n + ' کد یکتا ساخته و ذخیره شد (' + rows[0].c + (n > 1 ? ' … ' + rows[n - 1].c : '') + ')');
+  };
+  $('bGCsv').onclick = async () => {
+    const data = csv(), name = 'gmw-codes.csv';
+    try { const f = new File([data], name, { type: 'text/csv' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+    try { const u = URL.createObjectURL(new Blob([data], { type: 'text/csv' })), l = document.createElement('a'); l.href = u; l.download = name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); } catch(e){}
+    const d = $('gdump'); d.hidden = false; d.value = data.slice(1);
+  };
+  $('bGCopy').onclick = async () => {
+    const data = csv().slice(1), d = $('gdump'); d.hidden = false; d.value = data;
+    try { await navigator.clipboard.writeText(data); log('دفتر کدها کپی شد'); $('bGCopy').textContent = 'کپی شد ✓'; setTimeout(() => $('bGCopy').textContent = 'کپی همه', 1500); } catch(e){ d.focus(); d.select(); }
+  };
+})();
+syncCont();
 (function(){
   const op = $('opmode'), apply = () => document.body.classList.toggle('op', !!op.checked);
   op.addEventListener('change', apply); apply();
-  log('نسخه ۵۳ • ' + (navigator.userAgent || '').slice(0, 90));
+  log('نسخه ۵۶ • ' + (navigator.userAgent || '').slice(0, 90));
   updateTsplUi();
 })();
 </script>
