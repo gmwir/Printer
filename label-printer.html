@@ -76,7 +76,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۷ • PT-260 • TSPL</small></div>
+  <div class="brand"><h1>چاپ لیبل</h1><small id="ver">نسخه ۵۸ • PT-260 • TSPL</small></div>
   <span class="pill" id="st">متصل نیست</span>
   <button id="bConn">اتصال</button>
 </div></header>
@@ -130,6 +130,7 @@ details details{border-top:1px solid var(--line);margin-top:14px;padding-top:12p
   </div>
   <label style="margin-top:8px">مهلت فعال‌سازی تا (شمسی؛ خودکار، قابل تغییر)<input type="text" id="gdead" inputmode="numeric" dir="ltr"></label>
   <label style="margin-top:8px">غلظت چاپ این لیبل (۰ تا ۱۵؛ اگر کاغذ گیر می‌کند کمتر، اگر کم‌رنگ است بیشتر)<input type="number" id="gdens" value="8" min="0" max="15" inputmode="numeric" data-save></label>
+  <label style="margin-top:8px">سرعت چاپ این لیبل (۱ = کندتر و قوی‌تر؛ اگر کاغذ می‌ایستد یا خط‌ها روی هم می‌افتند کمتر کن)<input type="number" id="gspd" value="2" min="1" max="10" inputmode="numeric" data-save></label>
   <button class="p xl" id="bGUse" type="button" style="margin-top:12px">ساخت لیبل با کد یکتا</button>
   <details>
     <summary>ویرایش نوشته‌های لیبل</summary>
@@ -1406,7 +1407,7 @@ async function startJob(){
         const d0 = PS.disc, tl0 = Date.now();
         if (manualStep() && printedAny) { big('اتصال تازه قبل از ' + meta.label + '…', 'run'); await forceFresh(meta.label); await sleep(1200); meta.skipFresh = true; }
         const yo2 = printedAny ? Math.round((+$('yoff2').value || 0) * 8) : 0, bh = bitsOf(data, yo2);
-        const gov = src.type === 'gmw' && $('gdens').value !== '' && !isNaN(+$('gdens').value) ? { dens: Math.max(0, Math.min(15, Math.round(+$('gdens').value))) } : null;
+        const gov = src.type === 'gmw' ? Object.assign({ cmp: false }, $('gdens').value !== '' && !isNaN(+$('gdens').value) ? { dens: Math.max(0, Math.min(15, Math.round(+$('gdens').value))) } : {}, $('gspd').value !== '' && !isNaN(+$('gspd').value) ? { spd: Math.max(1, Math.round(+$('gspd').value)) } : {}) : null;
         const frames = TSPL.on() ? tsplJobFrames(bh.bits, bh.h, gov ? Object.assign({}, contOv(p === to && c === copies) || {}, gov) : contOv(p === to && c === copies)) : jobFrames(bh.bits, bh.h, p);
         if (frames.info) log(meta.label + ' • داده: ' + frames.info.bytes + ' بایت در ' + frames.info.frames + ' بسته' + (frames.info.skipped ? ' (' + frames.info.skipped + ' نوار سفید حذف شد)' : '') + (printedAny ? ' • لیبل دوم به بعد' : ' • لیبل اول نوبت') + (yo2 ? ' • جابه‌جایی اضافه ' + yo2 + ' نقطه' : ''));
         await printUnit(frames, meta); printedAny = true; sentOfPage++;
@@ -1853,7 +1854,7 @@ syncCont();
 (function(){
   const op = $('opmode'), apply = () => document.body.classList.toggle('op', !!op.checked);
   op.addEventListener('change', apply); apply();
-  log('نسخه ۵۷ • ' + (navigator.userAgent || '').slice(0, 90));
+  log('نسخه ۵۸ • ' + (navigator.userAgent || '').slice(0, 90));
   updateTsplUi();
 })();
 </script>
